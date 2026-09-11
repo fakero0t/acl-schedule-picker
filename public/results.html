@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+  <title>ACL Weekend 1 — Group Results</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <div class="wrap">
+    <header class="mast">
+      <div class="kicker">Group Plan &middot; Live</div>
+      <h1>Who's Seeing What</h1>
+      <div class="sub">ACL Weekend One &middot; Results</div>
+    </header>
+
+    <div class="toolbar">
+      <div class="days" id="days"></div>
+      <div class="actions">
+        <a class="btn primary" href="/">← Pick / Edit yours</a>
+      </div>
+    </div>
+
+    <div class="count-strip" id="countStrip">Loading…</div>
+    <div class="legend">
+      <span><span class="sw" style="background:#fce1a2"></span>No picks</span>
+      <span><span class="sw" style="background:#f7a13a"></span>A few</span>
+      <span><span class="sw" style="background:#ff2e9a"></span>Crowd favorite</span>
+      <span style="opacity:.8">Hover / tap a box to see who</span>
+    </div>
+
+    <div id="grid"></div>
+  </div>
+
+  <div id="tip"><div class="t-title"></div><div class="t-names"></div></div>
+
+  <script src="/grid.js"></script>
+  <script src="/results.js"></script>
+</body>
+</html>

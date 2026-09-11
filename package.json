@@ -1,0 +1,19 @@
+{
+  "name": "acl-schedule-picker",
+  "version": "1.0.0",
+  "description": "ACL Festival Weekend 1 schedule picker — friends select artists, results tally live.",
+  "type": "commonjs",
+  "main": "server.js",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "better-sqlite3": "^11.8.1",
+    "express": "^4.21.2"
+  }
+}

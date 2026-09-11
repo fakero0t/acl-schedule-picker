@@ -1,0 +1,18 @@
+# Render blueprint. Durable option: a Starter instance with a 1GB disk so the
+# SQLite file survives redeploys/restarts. To deploy for $0 instead, delete the
+# `disk:` block and set `plan: free` (note: free filesystem is ephemeral — votes
+# can reset on redeploy/restart).
+services:
+  - type: web
+    name: acl-schedule-picker
+    runtime: node
+    plan: starter
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: DB_PATH
+        value: /var/data/picks.db
+    disk:
+      name: picks-data
+      mountPath: /var/data
+      sizeGB: 1

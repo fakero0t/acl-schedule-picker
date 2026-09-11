@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+  <title>ACL Weekend 1 — Pick Your Sets</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <div class="wrap">
+    <header class="mast">
+      <div class="kicker">Austin Parks Foundation Presents</div>
+      <h1>Austin City Limits</h1>
+      <div class="sub">Music Festival &middot; Weekend One</div>
+      <div class="dates">October 02–04 &middot; 2026</div>
+    </header>
+
+    <div class="toolbar">
+      <div class="days" id="days"></div>
+      <div class="actions">
+        <a class="btn ghost" href="/results">Results →</a>
+        <button class="btn" id="editBtn" hidden>Edit</button>
+        <button class="btn primary" id="submitBtn">Submit</button>
+      </div>
+    </div>
+
+    <div class="hint" id="hint">Tap the artists you want to see. Hit <b>Submit</b> when you're set.</div>
+
+    <div id="grid"></div>
+  </div>
+
+  <!-- name modal -->
+  <div class="modal-bg" id="modalBg">
+    <div class="modal">
+      <h2>Who's picking?</h2>
+      <p>Your name so your friends know who voted for what.</p>
+      <input id="nameInput" placeholder="e.g. Ary" maxlength="40" autocomplete="off" />
+      <button class="btn primary" id="nameGo" style="width:100%">Let's go</button>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script src="/grid.js"></script>
+  <script src="/app.js"></script>
+</body>
+</html>
