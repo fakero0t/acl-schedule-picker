@@ -26,25 +26,52 @@ test("schedule data is well-formed and ids are unique", () => {
   }
 });
 
-test("submit stores picks and results aggregates counts", async () => {
+const post = (base, name, picks) =>
+  fetch(`${base}/api/submit`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ name, picks }),
+  });
+
+test("submit stores tiered picks and results aggregates by tier", async () => {
   const { base, close } = await boot();
   try {
-    await fetch(`${base}/api/submit`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ name: "Ary", picks: [someId, anotherId] }),
-    });
-    await fetch(`${base}/api/submit`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ name: "Sam", picks: [someId] }),
-    });
+    await post(base, "Ary", [{ id: someId, tier: "definitely" }, { id: anotherId, tier: "maybe" }]);
+    await post(base, "Sam", [{ id: someId, tier: "maybe" }]);
 
     const res = await fetch(`${base}/api/results`).then((r) => r.json());
     assert.equal(res.totalPeople, 2);
-    assert.equal(res.counts[someId], 2);
-    assert.equal(res.counts[anotherId], 1);
-    assert.deepEqual(res.voters[someId].sort(), ["Ary", "Sam"]);
+    assert.equal(res.counts[someId].definitely, 1);
+    assert.equal(res.counts[someId].maybe, 1);
+    assert.equal(res.counts[someId].total, 2);
+    assert.equal(res.counts[someId].weighted, 1.5); // 1 + 0.5
+    assert.equal(res.counts[anotherId].maybe, 1);
+    assert.deepEqual(res.voters[someId].definitely, ["Ary"]);
+    assert.deepEqual(res.voters[someId].maybe.sort(), ["Sam"]);
+  } finally {
+    await close();
+  }
+});
+
+test("bare string ids are accepted and treated as definitely (back-compat)", async () => {
+  const { base, close } = await boot();
+  try {
+    await post(base, "Ary", [someId]);
+    const res = await fetch(`${base}/api/results`).then((r) => r.json());
+    assert.equal(res.counts[someId].definitely, 1);
+    assert.equal(res.counts[someId].maybe, 0);
+    const me = await fetch(`${base}/api/me?name=ary`).then((r) => r.json());
+    assert.deepEqual(me.picks, [{ id: someId, tier: "definitely" }]);
+  } finally {
+    await close();
+  }
+});
+
+test("invalid tier is rejected", async () => {
+  const { base, close } = await boot();
+  try {
+    const r = await post(base, "Ary", [{ id: someId, tier: "sorta" }]);
+    assert.equal(r.status, 400);
   } finally {
     await close();
   }
@@ -53,19 +80,13 @@ test("submit stores picks and results aggregates counts", async () => {
 test("re-submitting the same name overwrites (upsert), never duplicates", async () => {
   const { base, close } = await boot();
   try {
-    const post = (picks) =>
-      fetch(`${base}/api/submit`, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ name: "Ary", picks }),
-      });
-    await post([someId, anotherId]);
-    await post([anotherId]); // edited: dropped someId
+    await post(base, "Ary", [someId, anotherId]);
+    await post(base, "Ary", [anotherId]); // edited: dropped someId
 
     const res = await fetch(`${base}/api/results`).then((r) => r.json());
     assert.equal(res.totalPeople, 1, "same name must not create a second row");
     assert.equal(res.counts[someId], undefined);
-    assert.equal(res.counts[anotherId], 1);
+    assert.equal(res.counts[anotherId].total, 1);
   } finally {
     await close();
   }
@@ -102,13 +123,9 @@ test("missing name is rejected", async () => {
 test("/api/me returns saved picks for a returning person", async () => {
   const { base, close } = await boot();
   try {
-    await fetch(`${base}/api/submit`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ name: "Ary", picks: [someId] }),
-    });
+    await post(base, "Ary", [{ id: someId, tier: "maybe" }]);
     const me = await fetch(`${base}/api/me?name=ary`).then((r) => r.json());
-    assert.deepEqual(me.picks, [someId]);
+    assert.deepEqual(me.picks, [{ id: someId, tier: "maybe" }]);
   } finally {
     await close();
   }

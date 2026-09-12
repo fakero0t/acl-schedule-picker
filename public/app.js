@@ -1,9 +1,9 @@
-// Picker page: choose artists, submit, edit, resubmit.
+// Picker page: choose artists at two tiers (Definitely / Maybe), submit, edit.
 (function () {
   const NAME_KEY = "acl_name";
   let name = null;
-  let selected = new Set();
-  let locked = false; // true after a successful submit (read-only until Edit)
+  let selected = new Map(); // id -> "definitely" | "maybe"
+  let locked = false;       // true after a successful submit (read-only until Edit)
   let gridApi = null;
 
   const els = {
@@ -29,44 +29,95 @@
     if (navigator.vibrate) { try { navigator.vibrate(10); } catch (e) {} }
   }
 
+  function counts() {
+    let def = 0, maybe = 0;
+    for (const t of selected.values()) (t === "maybe" ? (maybe++) : (def++));
+    return { def, maybe, total: selected.size };
+  }
+
   function applyLockUI() {
-    const grids = els.grid.querySelectorAll(".grid");
-    grids.forEach((g) => g.classList.toggle("locked", locked));
+    els.grid.querySelectorAll(".grid").forEach((g) => g.classList.toggle("locked", locked));
     els.submitBtn.hidden = locked;
     els.editBtn.hidden = !locked;
+    const c = counts();
     els.hint.innerHTML = locked
-      ? `Submitted <b>${selected.size}</b> pick${selected.size === 1 ? "" : "s"}. Hit <b>Edit</b> to change them.`
-      : `Tap the artists you want to see. Hit <b>Submit</b> when you're set.`;
+      ? `Submitted <b>${c.def}</b> definitely &middot; <b>${c.maybe}</b> maybe. Hit <b>Edit</b> to change.`
+      : `Tap an artist, then pick <b>Definitely</b> or <b>Maybe</b>. Hit <b>Submit</b> when set.`;
   }
 
-  function decorateBox(box, artist) {
-    const check = document.createElement("span");
-    check.className = "check";
-    check.textContent = "✓";
-    box.appendChild(check);
+  // Reflect the current tier state onto one box.
+  function updateBox(box) {
+    const id = box.dataset.id;
+    const tier = selected.get(id) || null;
+    box.classList.toggle("selected", !!tier);
+    box.classList.toggle("t-def", tier === "definitely");
+    box.classList.toggle("t-maybe", tier === "maybe");
+    box.querySelector(".pill.def").classList.toggle("active", tier === "definitely");
+    box.querySelector(".pill.maybe").classList.toggle("active", tier === "maybe");
+    box.querySelector(".tier-tag").textContent = tier === "maybe" ? "MAYBE" : tier ? "DEFINITELY" : "";
+  }
+
+  function setTier(box, tier) {
+    if (locked) return;
+    selected.set(box.dataset.id, tier);
+    updateBox(box);
+    haptic();
+  }
+
+  function remove(box) {
+    if (locked) return;
+    selected.delete(box.dataset.id);
+    updateBox(box);
+    haptic();
+  }
+
+  function decorateBox(box) {
+    // remove (✕) badge
+    const badge = document.createElement("button");
+    badge.className = "badge";
+    badge.type = "button";
+    badge.textContent = "✕";
+    badge.setAttribute("aria-label", "Remove");
+    box.appendChild(badge);
+
+    // inline Def / Maybe toggle
+    const pills = document.createElement("div");
+    pills.className = "pills";
+    const def = document.createElement("button");
+    def.className = "pill def"; def.type = "button"; def.textContent = "Definitely";
+    const maybe = document.createElement("button");
+    maybe.className = "pill maybe"; maybe.type = "button"; maybe.textContent = "Maybe";
+    pills.append(def, maybe);
+    box.appendChild(pills);
+
+    // static tier label shown when locked
+    const tag = document.createElement("span");
+    tag.className = "tier-tag";
+    box.appendChild(tag);
+
+    // body tap: select as Definitely when empty (does nothing when already selected)
     box.addEventListener("click", () => {
       if (locked) return;
-      const id = artist.id;
-      if (selected.has(id)) { selected.delete(id); box.classList.remove("selected"); }
-      else { selected.add(id); box.classList.add("selected"); }
-      haptic();
+      if (!selected.has(box.dataset.id)) setTier(box, "definitely");
     });
+    def.addEventListener("click", (e) => { e.stopPropagation(); setTier(box, "definitely"); });
+    maybe.addEventListener("click", (e) => { e.stopPropagation(); setTier(box, "maybe"); });
+    badge.addEventListener("click", (e) => { e.stopPropagation(); remove(box); });
   }
 
-  function repaintSelections() {
-    els.grid.querySelectorAll(".box").forEach((b) => {
-      b.classList.toggle("selected", selected.has(b.dataset.id));
-    });
+  function repaint() {
+    els.grid.querySelectorAll(".box").forEach(updateBox);
   }
 
   async function submit() {
     if (!name) { openModal(); return; }
     els.submitBtn.disabled = true;
     try {
+      const picks = [...selected.entries()].map(([id, tier]) => ({ id, tier }));
       const res = await fetch("/api/submit", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ name, picks: [...selected] }),
+        body: JSON.stringify({ name, picks }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "submit failed");
@@ -80,30 +131,22 @@
     }
   }
 
-  function edit() {
-    locked = false;
-    applyLockUI();
-    toast("Edit mode");
-  }
+  function edit() { locked = false; applyLockUI(); toast("Edit mode"); }
 
-  function openModal() {
-    els.modalBg.classList.add("show");
-    els.nameInput.focus();
-  }
+  function openModal() { els.modalBg.classList.add("show"); els.nameInput.focus(); }
   function closeModal() { els.modalBg.classList.remove("show"); }
 
   async function setName(n) {
-    name = n.trim();
+    name = (n || "").trim();
     if (!name) return;
     localStorage.setItem(NAME_KEY, name);
     closeModal();
-    // Load any previously-saved picks for this name so they can edit.
     try {
       const me = await fetch("/api/me?name=" + encodeURIComponent(name)).then((r) => r.json());
       if (me.picks && me.picks.length) {
-        selected = new Set(me.picks);
+        selected = new Map(me.picks.map((p) => [p.id, p.tier || "definitely"]));
         locked = true; // they already submitted before
-        repaintSelections();
+        repaint();
       }
     } catch (e) {}
     applyLockUI();

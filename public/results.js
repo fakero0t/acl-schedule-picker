@@ -32,10 +32,14 @@
     boxById[artist.id] = box;
 
     const showTip = (ev) => {
-      const voters = box._voters || [];
-      if (!voters.length) return;
-      els.tipTitle.textContent = `${voters.length} ${voters.length === 1 ? "vote" : "votes"}`;
-      els.tipNames.textContent = voters.join(", ");
+      const v = box._voters || { definitely: [], maybe: [] };
+      const total = v.definitely.length + v.maybe.length;
+      if (!total) return;
+      els.tipTitle.textContent = `${total} ${total === 1 ? "vote" : "votes"}`;
+      let html = "";
+      if (v.definitely.length) html += `<div class="grp"><span class="lab def">Definitely</span> ${escapeHtml(v.definitely.join(", "))}</div>`;
+      if (v.maybe.length) html += `<div class="grp"><span class="lab maybe">Maybe</span> ${escapeHtml(v.maybe.join(", "))}</div>`;
+      els.tipNames.innerHTML = html;
       els.tip.classList.add("show");
       moveTip(ev);
     };
@@ -59,7 +63,7 @@
 
   function paint(results) {
     const { counts = {}, voters = {}, totalPeople = 0 } = results;
-    const maxCount = Math.max(1, ...Object.values(counts));
+    const maxWeighted = Math.max(1, ...Object.values(counts).map((c) => c.weighted || 0));
 
     els.countStrip.textContent = totalPeople === 0
       ? "No submissions yet — be the first to pick!"
@@ -68,23 +72,27 @@
     for (const artist of scheduleData.artists) {
       const box = boxById[artist.id];
       if (!box) continue;
-      const c = counts[artist.id] || 0;
-      const v = voters[artist.id] || [];
-      box._voters = v;
+      const c = counts[artist.id] || { definitely: 0, maybe: 0, total: 0, weighted: 0 };
+      box._voters = voters[artist.id] || { definitely: [], maybe: [] };
       const countEl = box.querySelector(".count");
-      countEl.textContent = c;
-      box.classList.toggle("picked", c > 0);
+      let html = "";
+      if (c.definitely) html += `<span class="d">${c.definitely}▲</span>`;
+      if (c.maybe) html += `<span class="m">${c.maybe}~</span>`;
+      countEl.innerHTML = html;
+      box.classList.toggle("picked", c.total > 0);
 
-      if (c === 0) {
+      if (c.total === 0) {
         box.style.background = "";
         box.classList.remove("hot");
       } else {
-        const ratio = c / maxCount;
+        const ratio = c.weighted / maxWeighted;
         box.style.background = rampColor(ratio);
         box.classList.toggle("hot", ratio >= 0.6);
       }
     }
   }
+
+  const escapeHtml = ACLGrid.escapeHtml;
 
   async function refresh() {
     try {

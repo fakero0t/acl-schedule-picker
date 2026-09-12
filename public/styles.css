@@ -127,15 +127,41 @@ body {
 /* press-down haptic feel */
 .box:active { transform: translateY(2px) scale(.975); box-shadow: inset 0 3px 6px var(--shadow); }
 
-/* selected (index) */
-.box.selected { background: #fff2c9; border-color: var(--sel); box-shadow: 0 0 0 3px rgba(255,46,154,.35), 0 2px 0 var(--shadow); }
-.box.selected .check {
-  position: absolute; top: -7px; right: -7px; width: 22px; height: 22px; border-radius: 50%;
-  background: var(--sel); color: #fff; display: flex; align-items: center; justify-content: center;
-  font-size: 13px; font-weight: 900; border: 2px solid #fff; box-shadow: 0 1px 3px var(--shadow);
+/* ---- selected tiers (index) ---- */
+.box.selected { background: #fff2c9; overflow: visible; z-index: 6; }
+.box.t-def { border-color: var(--pink); box-shadow: 0 0 0 3px rgba(255,46,154,.35), 0 2px 0 var(--shadow); }
+.box.t-maybe { border-style: dashed; border-color: #cf871f; background: #ffe7bb; box-shadow: 0 0 0 3px rgba(207,135,31,.30), 0 2px 0 var(--shadow); }
+
+/* remove (✕) badge — only when selected */
+.box .badge {
+  position: absolute; top: -8px; right: -8px; width: 22px; height: 22px; padding: 0; line-height: 1;
+  border-radius: 50%; border: 2px solid #fff; cursor: pointer; display: none;
+  align-items: center; justify-content: center; font-size: 11px; font-weight: 900; color: #fff;
+  background: var(--ink); box-shadow: 0 1px 3px var(--shadow);
 }
-.box .check { display: none; }
-.box.selected .check { display: flex; }
+.box.selected .badge { display: flex; }
+.box.t-def .badge { background: var(--pink); }
+.box.t-maybe .badge { background: #cf871f; }
+
+/* inline Definitely / Maybe toggle */
+.box .pills { display: none; gap: 3px; margin-top: 4px; width: 100%; }
+.box.selected .pills { display: flex; }
+.box .pill {
+  flex: 1; font-family: "Anton", sans-serif; text-transform: uppercase; letter-spacing: .02em;
+  font-size: 9px; padding: 3px 2px; border-radius: 6px; cursor: pointer; line-height: 1;
+  border: 1.5px solid var(--ink); background: rgba(255,255,255,.65); color: var(--ink);
+}
+.box .pill:active { transform: translateY(1px); }
+.box .pill.def.active { background: var(--pink); color: #fff; border-color: var(--pink); }
+.box .pill.maybe.active { background: #cf871f; color: #fff; border-color: #cf871f; }
+
+/* static tier tag (shown once locked) */
+.box .tier-tag { display: none; font-family: "Anton", sans-serif; font-size: 8.5px; letter-spacing: .05em; margin-top: 3px; padding: 1px 7px; border-radius: 5px; }
+.box.t-def .tier-tag { background: var(--pink); color: #fff; }
+.box.t-maybe .tier-tag { background: #cf871f; color: #fff; }
+.grid.locked .box .pills, .grid.locked .box .badge { display: none; }
+.grid.locked .box.selected .tier-tag { display: inline-block; }
+.grid.locked .box.selected { overflow: hidden; }
 
 /* locked (after submit) */
 .grid.locked .box { cursor: default; }
@@ -147,14 +173,18 @@ body {
 .box.result:active { transform: none; box-shadow: 0 2px 0 var(--shadow); }
 .box.result.picked { border-color: var(--ink); border-width: 3px; }
 .box .count {
-  position: absolute; top: -8px; right: -8px; min-width: 22px; height: 22px; padding: 0 5px;
-  border-radius: 999px; background: var(--ink); color: var(--box);
+  position: absolute; top: -9px; right: -9px; min-width: 22px; height: 22px; padding: 0 7px; gap: 5px;
+  border-radius: 999px; background: var(--ink);
   font-family: "Anton", sans-serif; font-size: 12px; display: none;
   align-items: center; justify-content: center; border: 2px solid var(--box); box-shadow: 0 1px 3px var(--shadow);
 }
 .box.result.picked .count { display: flex; }
+.box .count .d { color: #ff7ab8; }   /* definitely */
+.box .count .m { color: #ffca7a; }   /* maybe */
 .box.result.hot .nm, .box.result.hot .tm { color: #fff; }
-.box.result.hot .count { background: #fff; color: var(--ink); border-color: var(--ink); }
+.box.result.hot .count { background: #fff; border-color: var(--ink); }
+.box.result.hot .count .d { color: var(--pink); }
+.box.result.hot .count .m { color: #cf871f; }
 
 /* voter tooltip */
 #tip {
@@ -164,8 +194,12 @@ body {
   opacity: 0; transform: translateY(4px); transition: opacity .1s ease, transform .1s ease;
 }
 #tip.show { opacity: 1; transform: translateY(0); }
-#tip .t-title { font-family: "Anton", sans-serif; text-transform: uppercase; font-size: 12px; margin-bottom: 3px; color: var(--pink); }
+#tip .t-title { font-family: "Anton", sans-serif; text-transform: uppercase; font-size: 12px; margin-bottom: 4px; color: var(--pink); }
 #tip .t-names { color: var(--box); }
+#tip .grp { margin-top: 4px; }
+#tip .lab { font-family: "Anton", sans-serif; text-transform: uppercase; font-size: 9px; padding: 1px 6px; border-radius: 5px; margin-right: 5px; }
+#tip .lab.def { background: var(--pink); color: #fff; }
+#tip .lab.maybe { background: #cf871f; color: #fff; }
 
 /* ---- Name modal ---- */
 .modal-bg {
