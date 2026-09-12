@@ -2,7 +2,7 @@
 // Builds one CSS-grid per day; a decorator callback lets each page style/handle boxes.
 window.ACLGrid = (function () {
   function stageLabelHtml(stage) {
-    if (stage.key === "titos") return `TITO'S<br><small>HANDMADE VODKA</small>`;
+    if (stage.key === "titos") return `TITO'S`;
     if (stage.key === "amex") return `AMERICAN<br>EXPRESS`;
     return stage.label.toUpperCase();
   }
