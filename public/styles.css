@@ -171,7 +171,7 @@ body {
 /* ---- Results styling ---- */
 .box.result { cursor: default; }
 .box.result:active { transform: none; box-shadow: 0 2px 0 var(--shadow); }
-.box.result.picked { border-color: var(--ink); border-width: 3px; }
+.box.result.picked { border-color: var(--ink); border-width: 3px; overflow: visible; z-index: 5; }
 .box .count {
   position: absolute; top: -9px; right: -9px; min-width: 22px; height: 22px; padding: 0 7px; gap: 5px;
   border-radius: 999px; background: var(--ink);

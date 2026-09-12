@@ -1,6 +1,7 @@
 // Picker page: choose artists at two tiers (Definitely / Maybe), submit, edit.
 (function () {
   const NAME_KEY = "acl_name";
+  const DRAFT_PREFIX = "acl_draft_v1_";
   let name = null;
   let selected = new Map(); // id -> "definitely" | "maybe"
   let locked = false;       // true after a successful submit (read-only until Edit)
@@ -28,6 +29,23 @@
   function haptic() {
     if (navigator.vibrate) { try { navigator.vibrate(10); } catch (e) {} }
   }
+
+  // ---- draft persistence (survive a refresh before submitting) ----
+  function draftKey() { return DRAFT_PREFIX + (name || "").toLowerCase(); }
+  function saveDraft() {
+    if (!name) return;
+    try {
+      const picks = [...selected.entries()].map(([id, tier]) => ({ id, tier }));
+      localStorage.setItem(draftKey(), JSON.stringify(picks));
+    } catch (e) {}
+  }
+  function loadDraft() {
+    try {
+      const raw = localStorage.getItem(draftKey());
+      return raw ? JSON.parse(raw) : null;
+    } catch (e) { return null; }
+  }
+  function clearDraft() { try { localStorage.removeItem(draftKey()); } catch (e) {} }
 
   function counts() {
     let def = 0, maybe = 0;
@@ -61,6 +79,7 @@
     if (locked) return;
     selected.set(box.dataset.id, tier);
     updateBox(box);
+    saveDraft();
     haptic();
   }
 
@@ -68,6 +87,7 @@
     if (locked) return;
     selected.delete(box.dataset.id);
     updateBox(box);
+    saveDraft();
     haptic();
   }
 
@@ -122,6 +142,7 @@
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "submit failed");
       locked = true;
+      clearDraft(); // now saved server-side
       applyLockUI();
       toast("Submitted! 🎉");
     } catch (e) {
@@ -142,8 +163,14 @@
     localStorage.setItem(NAME_KEY, name);
     closeModal();
     try {
+      const draft = loadDraft();
       const me = await fetch("/api/me?name=" + encodeURIComponent(name)).then((r) => r.json());
-      if (me.picks && me.picks.length) {
+      if (draft && draft.length) {
+        // Unsubmitted in-progress work wins (survives a refresh, stays editable).
+        selected = new Map(draft.map((p) => [p.id, p.tier || "definitely"]));
+        locked = false;
+        repaint();
+      } else if (me.picks && me.picks.length) {
         selected = new Map(me.picks.map((p) => [p.id, p.tier || "definitely"]));
         locked = true; // they already submitted before
         repaint();
