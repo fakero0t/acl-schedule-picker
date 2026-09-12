@@ -80,6 +80,7 @@
       if (c.maybe) html += `<span class="m">${c.maybe}~</span>`;
       countEl.innerHTML = html;
       box.classList.toggle("picked", c.total > 0);
+      box.classList.toggle("empty", c.total === 0); // hide artists nobody picked
 
       if (c.total === 0) {
         box.style.background = "";
