@@ -10,6 +10,8 @@ services:
     buildCommand: npm install
     startCommand: npm start
     envVars:
+      - key: NODE_VERSION
+        value: 22.12.0
       - key: DB_PATH
         value: /var/data/picks.db
     disk:
