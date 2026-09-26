@@ -236,7 +236,37 @@ body {
 .legend .sw { display: inline-block; width: 16px; height: 16px; border-radius: 4px; vertical-align: -3px; margin-right: 5px; border: 1.5px solid var(--box-line); }
 
 /* ---- Weekend timeline ---- */
-#timeline { max-width: 640px; margin: 4px auto 0; padding-bottom: 80px; /* clear the + button */ }
+.toolbar.centered { justify-content: center; }
+.weekend-layout {
+  display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 24px;
+  align-items: start; margin-top: 4px;
+}
+#timeline { min-width: 0; padding-bottom: 80px; /* clear the + button */ }
+.map-wrap { position: sticky; top: 84px; height: calc(100vh - 108px); min-height: 360px; }
+#map {
+  height: 100%; border: 3px solid var(--ink); border-radius: 14px; box-shadow: 0 4px 0 var(--shadow);
+  isolation: isolate; /* keep Leaflet's z-indexes under the sticky toolbar / modal */
+  background: var(--box);
+}
+.pin { border-radius: 50%; border: 3px solid var(--ink); box-shadow: 0 2px 0 var(--shadow); cursor: pointer; }
+.pin-acl { background: var(--pink); }
+.pin-event { background: #fff2c9; }
+.pin-hangout { background: var(--sky); }
+.leaflet-tooltip.pin-tip {
+  background: var(--ink); color: var(--box); border: none; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,.3);
+  font-family: "Anton", sans-serif; text-transform: uppercase; letter-spacing: .03em; font-size: 12px; padding: 5px 9px;
+}
+.leaflet-tooltip-top.pin-tip::before { border-top-color: var(--ink); }
+.card.flash { animation: card-flash 1.8s ease; }
+@keyframes card-flash {
+  0%, 60% { box-shadow: 0 0 0 4px #fff, 0 0 0 8px var(--ink); transform: scale(1.015); }
+  100% { box-shadow: 0 3px 0 var(--shadow); transform: none; }
+}
+
+@media (max-width: 900px) {
+  .weekend-layout { grid-template-columns: minmax(0, 1fr); gap: 12px; }
+  .map-wrap { order: -1; position: static; height: 260px; min-height: 0; }
+}
 .tl { list-style: none; margin: 0; padding: 0; position: relative; }
 .tl::before { /* the vertical rail */
   content: ""; position: absolute; top: 10px; bottom: 10px; left: 97px; width: 4px;
