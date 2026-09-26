@@ -6,6 +6,8 @@ const { createDb } = require("./db");
 
 const MAX_NAME = 40;
 const TIERS = new Set(["definitely", "maybe"]);
+const ADMIN_TOKEN = process.env.ADMIN_TOKEN || "dev";
+const PHASES = new Set(["picking", "duel"]);
 
 // Normalize a stored/incoming picks array into [{id, tier}], keeping only known
 // ids, de-duped by id (last wins). Back-compat: a bare string id => "definitely".
@@ -61,9 +63,24 @@ function createApp(db) {
     });
   });
 
+  app.get("/api/phase", (_req, res) => {
+    res.json({ phase: db.getPhase() });
+  });
+
+  app.post("/api/admin/phase", (req, res) => {
+    const { token, phase } = req.body || {};
+    if (token !== ADMIN_TOKEN) return res.status(403).json({ error: "forbidden" });
+    if (!PHASES.has(phase)) return res.status(400).json({ error: "invalid phase" });
+    db.setPhase(phase);
+    res.json({ ok: true, phase });
+  });
+
   // Submit / update one person's picks. Upserts by name.
   // picks: array of { id, tier } (tier "definitely"|"maybe"); bare id strings ok.
   app.post("/api/submit", (req, res) => {
+    if (db.getPhase() !== "picking") {
+      return res.status(409).json({ error: "picking is closed" });
+    }
     const body = req.body || {};
     const name = typeof body.name === "string" ? body.name.trim() : "";
     const picks = Array.isArray(body.picks) ? body.picks : null;

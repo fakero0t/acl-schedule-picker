@@ -130,3 +130,40 @@ test("/api/me returns saved picks for a returning person", async () => {
     await close();
   }
 });
+
+test("phase defaults to picking, admin can flip, submit freezes in duel", async () => {
+  const { base, close } = await boot();
+  try {
+    let phase = await fetch(`${base}/api/phase`).then((r) => r.json());
+    assert.equal(phase.phase, "picking");
+
+    // bad token rejected
+    let res = await fetch(`${base}/api/admin/phase`, {
+      method: "POST", headers: { "content-type": "application/json" },
+      body: JSON.stringify({ token: "wrong", phase: "duel" }),
+    });
+    assert.equal(res.status, 403);
+
+    // bad phase value rejected
+    res = await fetch(`${base}/api/admin/phase`, {
+      method: "POST", headers: { "content-type": "application/json" },
+      body: JSON.stringify({ token: "dev", phase: "banana" }),
+    });
+    assert.equal(res.status, 400);
+
+    // valid flip
+    res = await fetch(`${base}/api/admin/phase`, {
+      method: "POST", headers: { "content-type": "application/json" },
+      body: JSON.stringify({ token: "dev", phase: "duel" }),
+    });
+    assert.equal(res.status, 200);
+    phase = await fetch(`${base}/api/phase`).then((r) => r.json());
+    assert.equal(phase.phase, "duel");
+
+    // submit now frozen
+    res = await post(base, "Ary", [{ id: someId, tier: "definitely" }]);
+    assert.equal(res.status, 409);
+  } finally {
+    await close();
+  }
+});
