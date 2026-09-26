@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+  <title>ACL Schedule Planner</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <div class="wrap">
+    <header class="mast">
+      <div class="kicker">ACL Schedule Planner</div>
+      <h1>The Weekend</h1>
+      <div class="sub">Sets, Plans &amp; Everything In Between</div>
+      <div class="dates">October 02–04 &middot; 2026</div>
+    </header>
+
+    <div class="toolbar">
+      <div class="days" id="days"></div>
+    </div>
+
+    <div class="hint">ACL sets show when someone picked them. Tap <b>+</b> to add a plan.</div>
+    <div class="legend">
+      <span><span class="sw acl"></span>ACL set</span>
+      <span><span class="sw event"></span>Event</span>
+      <span><span class="sw hangout"></span>Pregame / Other</span>
+    </div>
+
+    <div id="timeline"></div>
+  </div>
+
+  <button class="fab" id="addBtn" type="button" aria-label="Add a plan"><svg viewBox="0 0 24 24" width="28" height="28" aria-hidden="true"><path d="M12 4v16M4 12h16" stroke="currentColor" stroke-width="4" stroke-linecap="round"/></svg></button>
+
+  <!-- add / edit plan modal -->
+  <div class="modal-bg" id="modalBg">
+    <form class="modal form" id="eventForm" autocomplete="off">
+      <h2 id="formTitle">Add a plan</h2>
+      <label>Name
+        <input name="name" maxlength="80" placeholder="e.g. Pregame at Ary's" required />
+      </label>
+      <label>Type</label>
+      <div class="days form-days" id="formKinds">
+        <button type="button" class="day-tab" data-kind="event">Event</button>
+        <button type="button" class="day-tab" data-kind="hangout">Pregame / Other</button>
+      </div>
+      <label>Day</label>
+      <div class="days form-days" id="formDays"></div>
+      <div class="row2">
+        <label>Starts
+          <input name="start" type="time" required />
+        </label>
+        <label>Ends <span class="opt">optional</span>
+          <input name="end" type="time" />
+        </label>
+      </div>
+      <label>Location
+        <input name="location" maxlength="120" placeholder="e.g. Republic Square Park" />
+      </label>
+      <label>Description
+        <textarea name="description" maxlength="500" rows="3" placeholder="Who's going, what to bring, links…"></textarea>
+      </label>
+      <div class="form-actions">
+        <button class="btn ghost" type="button" id="cancelBtn">Cancel</button>
+        <button class="btn primary" type="submit" id="saveBtn">Save</button>
+      </div>
+      <button class="del-link" type="button" id="deleteBtn" hidden>Delete this plan</button>
+    </form>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script src="/grid.js"></script>
+  <script src="/weekend.js"></script>
+</body>
+</html>

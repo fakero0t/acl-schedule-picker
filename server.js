@@ -6,6 +6,34 @@ const { createDb } = require("./db");
 
 const MAX_NAME = 40;
 const TIERS = new Set(["definitely", "maybe"]);
+const DAY_KEYS = new Set(schedule.DAYS.map((d) => d.key));
+const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/; // 24h "HH:MM"
+const EVENT_LIMITS = { name: 80, description: 500, location: 120 };
+const EVENT_KINDS = new Set(["event", "hangout"]); // outside event | pregame / other
+
+// Validate an incoming weekend event. -> { event } or { error }.
+function parseEvent(body) {
+  const b = body || {};
+  const str = (v) => (typeof v === "string" ? v.trim() : "");
+  const ev = {
+    day: str(b.day),
+    start: str(b.start),
+    end: str(b.end) || null,
+    name: str(b.name),
+    description: str(b.description),
+    location: str(b.location),
+    kind: str(b.kind) || "event",
+  };
+  if (!EVENT_KINDS.has(ev.kind)) return { error: "kind must be event or hangout" };
+  if (!DAY_KEYS.has(ev.day)) return { error: "day must be one of fri, sat, sun" };
+  if (!TIME_RE.test(ev.start)) return { error: "start must be a time like 18:30" };
+  if (ev.end && !TIME_RE.test(ev.end)) return { error: "end must be a time like 21:00" };
+  if (!ev.name) return { error: "name is required" };
+  for (const [k, max] of Object.entries(EVENT_LIMITS)) {
+    if (ev[k].length > max) return { error: `${k} too long` };
+  }
+  return { event: ev };
+}
 
 // Normalize a stored/incoming picks array into [{id, tier}], keeping only known
 // ids, de-duped by id (last wins). Back-compat: a bare string id => "definitely".
@@ -35,6 +63,7 @@ function createApp(db) {
       artists: schedule.ARTISTS,
       totalRows: schedule.TOTAL_ROWS,
       hourLabels: schedule.HOUR_LABELS,
+      slotMin: schedule.SLOT_MIN,
     });
   });
 
@@ -94,6 +123,34 @@ function createApp(db) {
     if (!name) return res.status(400).json({ error: "name is required" });
     const found = db.all().find((s) => s.name.toLowerCase() === name.toLowerCase());
     res.json({ name: found ? found.name : name, picks: found ? normalizePicks(found.picks) : [] });
+  });
+
+  // Weekend plans: shared list anyone can add to / edit / remove from.
+  app.get("/api/events", (_req, res) => {
+    res.json({ events: db.events() });
+  });
+
+  app.post("/api/events", (req, res) => {
+    const { event, error } = parseEvent(req.body);
+    if (error) return res.status(400).json({ error });
+    res.json({ ok: true, event: db.addEvent(event) });
+  });
+
+  app.put("/api/events/:id", (req, res) => {
+    const { event, error } = parseEvent(req.body);
+    if (error) return res.status(400).json({ error });
+    const updated = db.updateEvent(Number(req.params.id), event);
+    if (!updated) return res.status(404).json({ error: "event not found" });
+    res.json({ ok: true, event: updated });
+  });
+
+  app.delete("/api/events/:id", (req, res) => {
+    if (!db.deleteEvent(Number(req.params.id))) return res.status(404).json({ error: "event not found" });
+    res.json({ ok: true });
+  });
+
+  app.get("/weekend", (_req, res) => {
+    res.sendFile(path.join(__dirname, "public", "weekend.html"));
   });
 
   app.get("/results", (_req, res) => {
