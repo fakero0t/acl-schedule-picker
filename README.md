@@ -8,7 +8,9 @@ want to see, submit, and view a live group results board of who's seeing what.
   feel + haptic on mobile), **Submit**, then **Edit** to change and resubmit.
 - **`/results`** — live master view: each box shows a vote count, a highlighted
   border when picked, background color scaled by popularity (cream → orange →
-  pink), and who voted on hover/tap. Auto-refreshes every 3s.
+  pink), and who voted on hover/tap. Refreshes on open, every 30s while on screen, and
+  whenever the app comes back to the foreground; works offline from the last
+  saved copy.
 
 Everyone opens the same link and enters their name once (stored locally + with
 their submission). One row per person in SQLite; resubmitting overwrites.

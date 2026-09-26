@@ -1,7 +1,7 @@
 // Weekend page: one chronological timeline per day mixing the ACL sets the group
 // picked with shared plans (pregames, brunches, night shows) anyone can add/edit.
 (function () {
-  const POLL_MS = 5000;
+  const POLL_MS = 30000;
   const LATE_NIGHT_MIN = 5 * 60; // times before 5 AM sort after the evening (same "day")
   const escapeHtml = ACLGrid.escapeHtml;
   const PLAN_DEFAULT_MIN = 60;  // assumed length of a plan with no end time
@@ -30,6 +30,7 @@
     saveBtn: document.getElementById("saveBtn"),
     deleteBtn: document.getElementById("deleteBtn"),
     toast: document.getElementById("toast"),
+    netStatus: document.getElementById("netStatus"),
   };
 
   function toast(msg) {
@@ -170,6 +171,7 @@
     map = L.map("map", { scrollWheelZoom: false, dragging: !L.Browser.mobile }).setView(AUSTIN, 12);
     L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
       maxZoom: 19,
+      crossOrigin: true, // CORS tiles so the service worker can keep them for offline
       attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
     }).addTo(map);
     pinLayer = L.layerGroup().addTo(map);
@@ -257,14 +259,12 @@
 
   async function refresh() {
     try {
-      const [ev, res] = await Promise.all([
-        fetch("/api/events").then((r) => r.json()),
-        fetch("/api/results").then((r) => r.json()),
-      ]);
-      events = ev.events || [];
-      results = res;
+      const [ev, res] = await Promise.all([ACLNet.getJSON("/api/events"), ACLNet.getJSON("/api/results")]);
+      events = ev.data.events || [];
+      results = res.data;
       render();
-    } catch (e) { /* keep last render on transient error */ }
+      ACLNet.showStatus(els.netStatus, { t: Math.min(ev.t, res.t), fresh: ev.fresh && res.fresh });
+    } catch (e) { /* nothing saved yet and no signal: keep last render */ }
   }
 
   // ---- add / edit modal ----
@@ -313,7 +313,7 @@
     };
     els.saveBtn.disabled = true;
     try {
-      const res = await fetch(editing ? `/api/events/${editing.id}` : "/api/events", {
+      const res = await ACLNet.request(editing ? `/api/events/${editing.id}` : "/api/events", {
         method: editing ? "PUT" : "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify(body),
@@ -340,7 +340,7 @@
       return;
     }
     try {
-      const res = await fetch(`/api/events/${editing.id}`, { method: "DELETE" });
+      const res = await ACLNet.request(`/api/events/${editing.id}`, { method: "DELETE" });
       if (!res.ok) throw new Error((await res.json()).error || "delete failed");
       closeForm();
       await refresh();
@@ -359,7 +359,7 @@
 
   async function init() {
     if (window.L) initMap(); // timeline still works if the map library fails to load
-    scheduleData = await fetch("/api/schedule").then((r) => r.json());
+    scheduleData = (await ACLNet.getJSON("/api/schedule")).data;
     activeDay = scheduleData.days[0].key;
     ACLGrid.buildDayTabs(els.days, scheduleData.days, (key) => { activeDay = key; render(); });
 
@@ -387,9 +387,16 @@
       if (ev) openForm(ev);
     });
 
+    // Paint the last-saved plans instantly, then fetch fresh ones right away.
+    const ev = ACLNet.cached("/api/events"), res = ACLNet.cached("/api/results");
+    if (ev && res) {
+      events = ev.data.events || [];
+      results = res.data;
+      render();
+      ACLNet.showStatus(els.netStatus, { t: Math.min(ev.t, res.t), fresh: false, pending: true });
+    }
     await refresh();
-    setInterval(() => { if (!els.modalBg.classList.contains("show")) refresh(); }, POLL_MS);
-    document.addEventListener("visibilitychange", () => { if (!document.hidden) refresh(); });
+    ACLNet.poll(refresh, POLL_MS, () => els.modalBg.classList.contains("show"));
   }
 
   init();

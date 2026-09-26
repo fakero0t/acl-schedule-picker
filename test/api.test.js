@@ -195,3 +195,22 @@ test("/api/me returns saved picks for a returning person", async () => {
     await close();
   }
 });
+
+test("offline: every file the service worker precaches is served", async () => {
+  const { base, close } = await boot();
+  try {
+    const sw = await fetch(`${base}/sw.js`).then((r) => r.text());
+    const list = JSON.parse(sw.match(/const PRECACHE = (\[[\s\S]*?\]);/)[1].replace(/,\s*\]/, "]"));
+    assert.ok(list.length > 10);
+    for (const url of list) {
+      assert.equal((await fetch(base + url)).status, 200, `${url} should be served`);
+    }
+    const manifest = await fetch(`${base}/manifest.webmanifest`);
+    assert.match(manifest.headers.get("content-type"), /manifest\+json/);
+    for (const icon of (await manifest.json()).icons) {
+      assert.equal((await fetch(base + icon.src)).status, 200, `${icon.src} should be served`);
+    }
+  } finally {
+    await close();
+  }
+});
