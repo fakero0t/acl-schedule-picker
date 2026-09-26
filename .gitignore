@@ -4,3 +4,10 @@ data/*.db
 data/*.db-*
 .DS_Store
 .env
+
+# Claude Code local + planning artifacts (not part of the app)
+.claude/
+docs/superpowers/
+.superpowers/
+ACL25_Patron.Map_10.7.web.jpg
+ACL26_Patron.Map_Horizontal_09.22.png
