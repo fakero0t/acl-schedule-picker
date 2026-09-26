@@ -120,6 +120,71 @@ test("missing name is rejected", async () => {
   }
 });
 
+const sendEvent = (base, method, path, body) =>
+  fetch(`${base}${path}`, {
+    method,
+    headers: { "content-type": "application/json" },
+    body: body ? JSON.stringify(body) : undefined,
+  });
+
+test("events: seeded with Coffee & Chill on a fresh db", async () => {
+  const { base, close } = await boot();
+  try {
+    const { events } = await fetch(`${base}/api/events`).then((r) => r.json());
+    assert.equal(events.length, 1);
+    assert.equal(events[0].day, "sat");
+    assert.equal(events[0].start, "10:00");
+    assert.equal(events[0].location, "Republic Square Park");
+  } finally {
+    await close();
+  }
+});
+
+test("events: add, edit, delete round-trip", async () => {
+  const { base, close } = await boot();
+  try {
+    const created = await sendEvent(base, "POST", "/api/events", {
+      day: "fri", start: "17:30", name: " Pregame at Sam's ", location: "Sam's house", description: "BYOB",
+    }).then((r) => r.json());
+    assert.equal(created.event.name, "Pregame at Sam's", "name is trimmed");
+    assert.equal(created.event.end, null);
+    assert.equal(created.event.kind, "event", "kind defaults to event");
+
+    const id = created.event.id;
+    const upd = await sendEvent(base, "PUT", `/api/events/${id}`, {
+      day: "fri", start: "18:00", end: "19:30", name: "Pregame at Sam's", location: "Sam's house", description: "", kind: "hangout",
+    }).then((r) => r.json());
+    assert.equal(upd.event.start, "18:00");
+    assert.equal(upd.event.kind, "hangout");
+    assert.equal(upd.event.end, "19:30");
+
+    let { events } = await fetch(`${base}/api/events`).then((r) => r.json());
+    assert.equal(events.filter((e) => e.id === id).length, 1);
+
+    assert.equal((await sendEvent(base, "DELETE", `/api/events/${id}`)).status, 200);
+    ({ events } = await fetch(`${base}/api/events`).then((r) => r.json()));
+    assert.equal(events.find((e) => e.id === id), undefined);
+    assert.equal((await sendEvent(base, "DELETE", `/api/events/${id}`)).status, 404);
+  } finally {
+    await close();
+  }
+});
+
+test("events: invalid input is rejected", async () => {
+  const { base, close } = await boot();
+  try {
+    const ok = { day: "sat", start: "20:00", name: "Night show" };
+    assert.equal((await sendEvent(base, "POST", "/api/events", { ...ok, day: "mon" })).status, 400);
+    assert.equal((await sendEvent(base, "POST", "/api/events", { ...ok, start: "8pm" })).status, 400);
+    assert.equal((await sendEvent(base, "POST", "/api/events", { ...ok, end: "25:00" })).status, 400);
+    assert.equal((await sendEvent(base, "POST", "/api/events", { ...ok, name: "  " })).status, 400);
+    assert.equal((await sendEvent(base, "POST", "/api/events", { ...ok, kind: "party" })).status, 400);
+    assert.equal((await sendEvent(base, "PUT", "/api/events/9999", ok)).status, 404);
+  } finally {
+    await close();
+  }
+});
+
 test("/api/me returns saved picks for a returning person", async () => {
   const { base, close } = await boot();
   try {
