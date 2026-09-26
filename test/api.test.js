@@ -318,26 +318,35 @@ test("duel/results: 'split' wins with strictly more votes, but loses ties to a s
     await post(base, "Ary", [{ id: a.id, tier: "definitely" }]);
     await post(base, "Sam", [{ id: b.id, tier: "definitely" }]);
     await post(base, "Deb", [{ id: a.id, tier: "definitely" }]);
+    await post(base, "Eve", [{ id: b.id, tier: "definitely" }]);
     await flip("duel");
 
     const duel = await fetch(`${base}/api/duel?name=Ary`).then((r) => r.json());
     const clash = duel.clashes.find((c) => c.options.some((o) => o.id === a.id));
     assert.ok(clash);
 
+    // Zero answers yet -> winner must be null (no one has voted on this clash).
+    let results = await fetch(`${base}/api/duel/results`).then((r) => r.json());
+    let rc = results.clashes.find((c) => c.id === clash.id);
+    assert.equal(rc.winner, null, "an unanswered clash has no winner");
+
     // split is the plurality: 2 split vs 1 for `a`.
     await answer("Ary", clash.id, "split");
     await answer("Sam", clash.id, "split");
     await answer("Deb", clash.id, a.id);
 
-    let results = await fetch(`${base}/api/duel/results`).then((r) => r.json());
-    let rc = results.clashes.find((c) => c.id === clash.id);
-    assert.equal(rc.winner, "split", "split has strictly more votes so it wins");
-
-    // Now tie it up: 2 split vs 2 for `a` -> show wins the tie, never split.
-    await answer("Sam", clash.id, a.id);
     results = await fetch(`${base}/api/duel/results`).then((r) => r.json());
     rc = results.clashes.find((c) => c.id === clash.id);
-    assert.equal(rc.winner, a.id, "tie between split and a show goes to the show");
+    assert.equal(rc.winner, "split", "split has strictly more votes so it wins");
+
+    // Genuine 2-2 tie: a 4th voter (Eve) also picks `a`, so split=2 (Ary,Sam)
+    // and a.id=2 (Deb,Eve) -- an exact tie must go to the show, never split.
+    await answer("Eve", clash.id, a.id);
+    results = await fetch(`${base}/api/duel/results`).then((r) => r.json());
+    rc = results.clashes.find((c) => c.id === clash.id);
+    assert.equal(rc.tally["split"], 2);
+    assert.equal(rc.tally[a.id], 2);
+    assert.equal(rc.winner, a.id, "an exact 2-2 tie between split and a show goes to the show");
     assert.notEqual(rc.winner, "none");
   } finally {
     await close();
