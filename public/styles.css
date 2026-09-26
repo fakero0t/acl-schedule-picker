@@ -291,6 +291,9 @@ body {
   background: var(--box); border: 3px solid var(--ink);
 }
 .tl-item.plan .tl-dot { background: var(--pink); }
+/* same-start items sit side by side in one row */
+.tl-cards { display: flex; flex-wrap: wrap; gap: 10px; min-width: 0; }
+.tl-cards > .card { flex: 1 1 calc(50% - 10px); min-width: 0; } /* at most two per line */
 
 .card {
   position: relative; text-align: left; width: 100%;
@@ -298,7 +301,7 @@ body {
   padding: 10px 12px; box-shadow: 0 3px 0 var(--shadow); color: var(--ink); font: inherit;
 }
 .card-kicker { font-weight: 800; font-size: 10.5px; letter-spacing: .12em; text-transform: uppercase; opacity: .7; }
-.card-name { font-family: "Anton", sans-serif; text-transform: uppercase; font-size: 19px; line-height: 1.02; margin: 2px 0 3px; }
+.card-name { font-family: "Anton", sans-serif; text-transform: uppercase; font-size: 19px; line-height: 1.02; margin: 2px 0 3px; overflow-wrap: break-word; }
 .card-time { font-size: 12px; font-weight: 700; color: var(--ink-soft); }
 .card .who { font-size: 12.5px; font-weight: 700; margin-top: 5px; }
 .card .lab { font-family: "Anton", sans-serif; text-transform: uppercase; font-size: 9px; padding: 1px 6px; border-radius: 5px; margin-right: 6px; vertical-align: 1px; color: #fff; }
@@ -312,8 +315,8 @@ body {
 .card.plan { background: #fff2c9; border: 3px solid var(--ink); }
 .card.plan .card-kicker { color: var(--pink); opacity: 1; }
 .card.plan .card-name { padding-right: 56px; } /* clear the Edit button */
-.tl-item.hangout .card.plan { background: var(--sky); }
-.tl-item.hangout .card.plan .card-kicker { color: var(--sky-ink); }
+.card.plan.hangout { background: var(--sky); }
+.card.plan.hangout .card-kicker { color: var(--sky-ink); }
 .tl-item.hangout .tl-dot { background: var(--sky); }
 .card-edit {
   position: absolute; top: 9px; right: 10px; font-family: "Anton", sans-serif; text-transform: uppercase;
@@ -374,6 +377,12 @@ body {
   .tl-hm { font-size: 25px; }
   .tl-ap { font-size: 11.5px; }
   .tl-gap span { left: 94px; }
+  /* side-by-side cards are narrow: Edit floats so the name gets the full width */
+  .tl-cards { gap: 8px; }
+  .tl-cards > .card { flex-basis: calc(50% - 8px); }
+  .tl-cards.multi > .card { padding: 9px 10px; }
+  .tl-cards.multi .card-edit { position: static; float: right; margin: -3px -4px 4px 6px; padding: 4px 8px; }
+  .tl-cards.multi .card.plan .card-name { padding-right: 0; clear: right; }
 }
 
 @media (max-width: 560px) {
