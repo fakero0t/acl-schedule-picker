@@ -114,7 +114,7 @@
   function planCard(it) {
     const { ev } = it;
     return `
-      <div class="card plan" data-key="plan-${ev.id}">
+      <div class="card plan${ev.kind === "hangout" ? " hangout" : ""}" data-key="plan-${ev.id}">
         <button class="card-edit" type="button" data-id="${ev.id}">Edit</button>
         <div class="card-kicker">${KIND_LABELS[ev.kind] || KIND_LABELS.event}</div>
         <div class="card-name">${escapeHtml(ev.name)}</div>
@@ -244,13 +244,24 @@
       const label = [h && `${h} hr`, m && `${m} min`].filter(Boolean).join(" ");
       return `<li class="tl-gap" style="height:${Math.round(gap * GAP_PX_PER_MIN)}px"><span>${label} free</span></li>`;
     };
-    els.timeline.innerHTML = `<ol class="tl">${items
-      .map((it) => `${gapBefore(it)}
-        <li class="tl-item ${it.kind}${it.ev ? " " + (it.ev.kind || "event") : ""}">
-          <div class="tl-time">${timeBlock(it.start)}</div>
+    // Items that start at the same time share one row (one timestamp), side by side as options.
+    const rows = [];
+    for (const it of items) {
+      const last = rows[rows.length - 1];
+      if (last && last[0].start === it.start) last.push(it);
+      else rows.push([it]);
+    }
+    els.timeline.innerHTML = `<ol class="tl">${rows
+      .map((row) => {
+        const first = row[0];
+        const gap = row.map(gapBefore)[0];
+        return `${gap}
+        <li class="tl-item ${first.kind}${first.ev ? " " + (first.ev.kind || "event") : ""}">
+          <div class="tl-time">${timeBlock(first.start)}</div>
           <div class="tl-dot"></div>
-          ${it.kind === "acl" ? aclCard(it) : planCard(it)}
-        </li>`)
+          <div class="tl-cards${row.length > 1 ? " multi" : ""}">${row.map((it) => (it.kind === "acl" ? aclCard(it) : planCard(it))).join("")}</div>
+        </li>`;
+      })
       .join("")}</ol>`;
     applyFlash(); // keep a pin-click highlight alive across poll re-renders
   }
