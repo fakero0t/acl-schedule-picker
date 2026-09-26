@@ -26,18 +26,26 @@
     const $ = (id) => document.getElementById(id);
     $("tok").value = localStorage.getItem(TKEY) || "";
     async function showPhase() {
-      const { phase } = await fetch("/api/phase").then((r) => r.json());
-      $("phaseNow").textContent = phase;
+      try {
+        const { phase } = await fetch("/api/phase").then((r) => r.json());
+        $("phaseNow").textContent = phase;
+      } catch (e) {
+        $("phaseNow").textContent = "unknown (error)";
+      }
     }
     async function setPhase(phase) {
-      const token = $("tok").value.trim();
-      localStorage.setItem(TKEY, token);
-      const res = await fetch("/api/admin/phase", {
-        method: "POST", headers: { "content-type": "application/json" },
-        body: JSON.stringify({ token, phase }),
-      });
-      $("msg").textContent = res.ok ? `Phase set to ${phase}.` : `Failed (${res.status}) — check token.`;
-      showPhase();
+      try {
+        const token = $("tok").value.trim();
+        localStorage.setItem(TKEY, token);
+        const res = await fetch("/api/admin/phase", {
+          method: "POST", headers: { "content-type": "application/json" },
+          body: JSON.stringify({ token, phase }),
+        });
+        $("msg").textContent = res.ok ? `Phase set to ${phase}.` : `Failed (${res.status}) — check token.`;
+        showPhase();
+      } catch (e) {
+        $("msg").textContent = "Network error — try again";
+      }
     }
     $("openBtn").addEventListener("click", () => setPhase("picking"));
     $("closeBtn").addEventListener("click", () => setPhase("duel"));
