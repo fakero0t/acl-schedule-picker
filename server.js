@@ -10,6 +10,9 @@ const DAY_KEYS = new Set(schedule.DAYS.map((d) => d.key));
 const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/; // 24h "HH:MM"
 const EVENT_LIMITS = { name: 80, description: 500, location: 120 };
 const EVENT_KINDS = new Set(["event", "hangout"]); // outside event | pregame / other
+const { MAP_W, MAP_H } = require("./public/geo");
+const LOCATION_TTL_MS = 30 * 60 * 1000; // hide + delete positions older than 30 min
+const MEETUP_TTL_MS = 12 * 60 * 60 * 1000; // a meeting point clears itself after 12 h
 
 // Validate an incoming weekend event. -> { event } or { error }.
 function parseEvent(body) {
@@ -155,6 +158,74 @@ function createApp(db) {
 
   app.get("/results", (_req, res) => {
     res.sendFile(path.join(__dirname, "public", "results.html"));
+  });
+
+  // Share my live location: GPS ({lat, lon, accuracy}) or a manual map pin ({x, y}).
+  app.post("/api/location", (req, res) => {
+    const body = req.body || {};
+    const name = typeof body.name === "string" ? body.name.trim() : "";
+    if (!name) return res.status(400).json({ error: "name is required" });
+    if (name.length > MAX_NAME) return res.status(400).json({ error: "name too long" });
+
+    const num = (v) => (typeof v === "number" && Number.isFinite(v) ? v : null);
+    const lat = num(body.lat), lon = num(body.lon), accuracy = num(body.accuracy);
+    const x = num(body.x), y = num(body.y);
+    const hasGps = lat !== null && lon !== null && Math.abs(lat) <= 90 && Math.abs(lon) <= 180;
+    const hasPin = x !== null && y !== null && x >= 0 && x <= MAP_W && y >= 0 && y <= MAP_H;
+    if (!hasGps && !hasPin) return res.status(400).json({ error: "lat/lon or x/y required" });
+
+    db.setLocation(name, {
+      lat: hasGps ? lat : null,
+      lon: hasGps ? lon : null,
+      accuracy: hasGps ? accuracy : null,
+      x: hasPin ? x : null,
+      y: hasPin ? y : null,
+    });
+    res.json({ ok: true });
+  });
+
+  // Stop sharing.
+  app.delete("/api/location", (req, res) => {
+    const name = typeof req.query.name === "string" ? req.query.name.trim() : "";
+    if (!name) return res.status(400).json({ error: "name is required" });
+    db.clearLocation(name);
+    res.json({ ok: true });
+  });
+
+  // Everyone's latest location (stale rows are purged) + the group meeting point.
+  app.get("/api/locations", (_req, res) => {
+    const m = db.meetup(MEETUP_TTL_MS);
+    res.json({
+      now: Date.now(),
+      people: db.locations(LOCATION_TTL_MS).map((r) => ({
+        name: r.name, lat: r.lat, lon: r.lon, accuracy: r.accuracy,
+        x: r.x, y: r.y, updatedAt: r.updated_at,
+      })),
+      meetup: m && { x: m.x, y: m.y, setBy: m.set_by, updatedAt: m.updated_at },
+    });
+  });
+
+  // Set (or move) the shared meeting point. Anyone can.
+  app.post("/api/meetup", (req, res) => {
+    const body = req.body || {};
+    const name = typeof body.name === "string" ? body.name.trim() : "";
+    if (!name) return res.status(400).json({ error: "name is required" });
+    if (name.length > MAX_NAME) return res.status(400).json({ error: "name too long" });
+    const { x, y } = body;
+    const ok = (v, max) => typeof v === "number" && Number.isFinite(v) && v >= 0 && v <= max;
+    if (!ok(x, MAP_W) || !ok(y, MAP_H)) return res.status(400).json({ error: "x/y on the map required" });
+    db.setMeetup(name, x, y);
+    res.json({ ok: true });
+  });
+
+  // Remove the meeting point. Anyone can.
+  app.delete("/api/meetup", (_req, res) => {
+    db.clearMeetup();
+    res.json({ ok: true });
+  });
+
+  app.get("/map", (_req, res) => {
+    res.sendFile(path.join(__dirname, "public", "map.html"));
   });
 
   return app;
