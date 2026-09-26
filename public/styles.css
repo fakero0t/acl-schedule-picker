@@ -257,3 +257,16 @@ body {
 .do-meta { font-size: .82rem; opacity: .7; }
 .do-votes { font-size: .82rem; font-weight: 700; color: var(--pink); }
 .duel-nav { display: flex; gap: 10px; justify-content: space-between; margin-top: 16px; }
+
+/* ---- group plan ---- */
+.plan-list { display: grid; gap: 16px; margin-top: 12px; }
+.plan-card { border: 2px solid var(--box-line); border-radius: 14px; padding: 14px; background: #fff; }
+.plan-day { font-family: "Anton", sans-serif; letter-spacing: .06em; opacity: .6; margin-bottom: 8px; }
+.plan-opt { padding: 10px 12px; border-radius: 10px; background: #faf7f2; margin-bottom: 8px; }
+.plan-opt.win { background: var(--pink-tint); border: 2px solid var(--pink); }
+.plan-opt.none { opacity: .75; }
+.po-top { display: flex; justify-content: space-between; align-items: baseline; }
+.po-name { font-family: "Anton", sans-serif; font-size: 1.1rem; }
+.po-count { font-weight: 800; color: var(--pink); }
+.po-meta { font-size: .82rem; opacity: .7; }
+.po-who { font-size: .82rem; margin-top: 2px; }
