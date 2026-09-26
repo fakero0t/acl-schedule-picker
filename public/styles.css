@@ -7,6 +7,7 @@
   --ink: #1c1206;
   --ink-soft: #5a3d12;
   --pink: #ff2e9a;
+  --pink-tint: #fff0f7;     /* light selected-state fill (duel modal) */
   --header: #fce1a2;
   --sel: #ff2e9a;
   --shadow: rgba(28, 18, 6, 0.28);
@@ -248,11 +249,11 @@ body {
 .duel-options { display: grid; gap: 10px; }
 .duel-opt {
   display: grid; text-align: left; gap: 2px; padding: 12px 14px;
-  border: 2px solid rgba(0,0,0,.15); border-radius: 12px; background: #fff; cursor: pointer;
+  border: 2px solid var(--box-line); border-radius: 12px; background: #fff; cursor: pointer;
 }
-.duel-opt.sel { border-color: #ff2e9a; background: #fff0f7; }
+.duel-opt.sel { border-color: var(--pink); background: var(--pink-tint); }
 .duel-opt.none { opacity: .8; }
 .do-name { font-family: "Anton", sans-serif; font-size: 1.1rem; }
 .do-meta { font-size: .82rem; opacity: .7; }
-.do-votes { font-size: .82rem; font-weight: 700; color: #d81b78; }
+.do-votes { font-size: .82rem; font-weight: 700; color: var(--pink); }
 .duel-nav { display: flex; gap: 10px; justify-content: space-between; margin-top: 16px; }

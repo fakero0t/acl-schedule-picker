@@ -190,8 +190,6 @@
   // ---- duel quiz ----
   let duel = { clashes: [], answers: {}, i: 0, done: false };
 
-  function escapeHtml(s) { return ACLGrid.escapeHtml(s); }
-
   function renderDuel() {
     const clash = duel.clashes[duel.i];
     if (!clash) return;
@@ -200,10 +198,10 @@
       `You picked more than one show at the same time. Where should the group go?`;
     const chosen = duel.answers[clash.id];
     const opts = clash.options.map((o) => {
-      const who = o.voters.length ? escapeHtml(o.voters.join(", ")) : "no votes yet";
+      const who = o.voters.length ? ACLGrid.escapeHtml(o.voters.join(", ")) : "no votes yet";
       return `<button class="duel-opt${chosen === o.id ? " sel" : ""}" data-choice="${o.id}">
-          <span class="do-name">${escapeHtml(o.name)}</span>
-          <span class="do-meta">${escapeHtml(o.timeLabel)} · ${escapeHtml(o.stage)}</span>
+          <span class="do-name">${ACLGrid.escapeHtml(o.name)}</span>
+          <span class="do-meta">${ACLGrid.escapeHtml(o.timeLabel)} · ${ACLGrid.escapeHtml(o.stage)}</span>
           <span class="do-votes">${o.count} vote${o.count === 1 ? "" : "s"} · ${who}</span>
         </button>`;
     }).join("");
@@ -227,11 +225,14 @@
     duel.answers[clashId] = choice;
     renderDuel();
     try {
-      await fetch("/api/duel/answer", {
+      const res = await fetch("/api/duel/answer", {
         method: "POST", headers: { "content-type": "application/json" },
         body: JSON.stringify({ name, clashId, choice }),
       });
-    } catch (e) {}
+      if (!res.ok) throw new Error("save failed");
+    } catch (e) {
+      toast("Error saving your answer — try again");
+    }
     if (duel.i < duel.clashes.length - 1) { duel.i++; renderDuel(); }
   }
 
@@ -242,7 +243,6 @@
         method: "POST", headers: { "content-type": "application/json" },
         body: JSON.stringify({ name }),
       });
-      duel.done = true;
       els.duelBg.classList.remove("show");
       toast("Locked in! See the group plan.");
       setTimeout(() => (window.location.href = "/plan"), 900);
@@ -280,7 +280,7 @@
     els.nameInput.addEventListener("keydown", (e) => { if (e.key === "Enter") setName(els.nameInput.value); });
 
     const saved = localStorage.getItem(NAME_KEY);
-    if (saved) setName(saved);
+    if (saved) await setName(saved);
     else openModal();
 
     applyLockUI();
