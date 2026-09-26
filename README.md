@@ -32,6 +32,20 @@ A shared planner for your friend group at **Austin City Limits 2026, Weekend One
 <details>
 <summary>Running it yourself</summary>
 
+## Duel mode (resolve time clashes)
+
+When two shows people voted for overlap in time, the group decides where to go
+together via a one-at-a-time quiz:
+
+1. Host closes picking at `/admin` (enter the admin token). Set `ADMIN_TOKEN` in
+   the environment; it defaults to `dev` locally. Closing picking freezes votes.
+2. Each friend, on their next visit, gets a blocking modal walking them through
+   every clash — pick one show per clash (or "No preference"). Progress saves as
+   they go and resumes if they leave; hitting **Submit** finalizes and they won't
+   see it again.
+3. **`/plan`** shows the group plan: the winning show per clash, the vote split,
+   and who chose what. Reopen picking anytime from `/admin`.
+
 ## Run locally
 
 ```

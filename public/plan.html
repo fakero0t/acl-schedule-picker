@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+  <title>ACL Group Plan</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <div class="wrap">
+    <header class="mast">
+      <div class="kicker">ACL Schedule Planner</div>
+      <h1>The Group Plan</h1>
+      <div class="sub">Your day, in order — swipe each slot for the alternatives</div>
+    </header>
+    <div class="toolbar">
+      <div class="days" id="days"></div>
+      <div class="actions">
+        <a class="btn ghost" href="/results">Results →</a>
+        <a class="btn primary" href="/">← Picker</a>
+      </div>
+    </div>
+    <div class="count-strip" id="planStrip">Loading…</div>
+    <div id="planDeck" class="plan-deck"></div>
+  </div>
+  <script src="/grid.js"></script>
+  <script src="/plan.js"></script>
+</body>
+</html>

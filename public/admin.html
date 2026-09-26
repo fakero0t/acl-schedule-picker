@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+  <title>ACL Admin</title>
+  <link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <div class="wrap">
+    <header class="mast"><div class="kicker">Host only</div><h1>Phase Control</h1></header>
+    <div class="count-strip">Current phase: <b id="phaseNow">…</b></div>
+    <div class="modal" style="max-width:420px;margin-top:16px">
+      <p>Enter the admin token, then open or close picking.</p>
+      <input id="tok" placeholder="admin token" autocomplete="off" />
+      <div class="actions" style="margin-top:12px;display:flex;gap:10px">
+        <button class="btn" id="openBtn">Open picking</button>
+        <button class="btn primary" id="closeBtn">Close → duel</button>
+      </div>
+      <div class="hint" id="msg" style="margin-top:10px"></div>
+    </div>
+  </div>
+  <script>
+    const TKEY = "acl_admin_token";
+    const $ = (id) => document.getElementById(id);
+    $("tok").value = localStorage.getItem(TKEY) || "";
+    async function showPhase() {
+      try {
+        const { phase } = await fetch("/api/phase").then((r) => r.json());
+        $("phaseNow").textContent = phase;
+      } catch (e) {
+        $("phaseNow").textContent = "unknown (error)";
+      }
+    }
+    async function setPhase(phase) {
+      try {
+        const token = $("tok").value.trim();
+        localStorage.setItem(TKEY, token);
+        const res = await fetch("/api/admin/phase", {
+          method: "POST", headers: { "content-type": "application/json" },
+          body: JSON.stringify({ token, phase }),
+        });
+        $("msg").textContent = res.ok ? `Phase set to ${phase}.` : `Failed (${res.status}) — check token.`;
+        showPhase();
+      } catch (e) {
+        $("msg").textContent = "Network error — try again";
+      }
+    }
+    $("openBtn").addEventListener("click", () => setPhase("picking"));
+    $("closeBtn").addEventListener("click", () => setPhase("duel"));
+    showPhase();
+  </script>
+</body>
+</html>

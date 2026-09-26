@@ -3,9 +3,12 @@ const fs = require("fs");
 const express = require("express");
 const schedule = require("./data/schedule");
 const { createDb } = require("./db");
+const { computeClashes } = require("./data/clashes");
 
 const MAX_NAME = 40;
 const TIERS = new Set(["definitely", "maybe"]);
+const ADMIN_TOKEN = process.env.ADMIN_TOKEN || "dev";
+const PHASES = new Set(["picking", "duel"]);
 const DAY_KEYS = new Set(schedule.DAYS.map((d) => d.key));
 const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/; // 24h "HH:MM"
 const EVENT_LIMITS = { name: 80, description: 500, location: 120 };
@@ -90,9 +93,170 @@ function createApp(db) {
     });
   });
 
+  app.get("/api/phase", (_req, res) => {
+    res.json({ phase: db.getPhase() });
+  });
+
+  app.post("/api/admin/phase", (req, res) => {
+    const { token, phase } = req.body || {};
+    if (token !== ADMIN_TOKEN) return res.status(403).json({ error: "forbidden" });
+    if (!PHASES.has(phase)) return res.status(400).json({ error: "invalid phase" });
+    db.setPhase(phase);
+    res.json({ ok: true, phase });
+  });
+
+  // Build clashes plus the counts/voters needed to enrich them.
+  function buildClashes() {
+    const submissions = db.all();
+    const counts = {};  // id -> { total }
+    const voters = {};  // id -> [names]  (flat, any tier)
+    const pickers = {}; // id -> { definitely: [names], maybe: [names] }
+    for (const s of submissions) {
+      for (const { id, tier } of normalizePicks(s.picks)) {
+        counts[id] = counts[id] || { total: 0 };
+        counts[id].total += 1;
+        (voters[id] = voters[id] || []).push(s.name);
+        const pt = (pickers[id] = pickers[id] || { definitely: [], maybe: [] });
+        pt[tier === "maybe" ? "maybe" : "definitely"].push(s.name);
+      }
+    }
+    const clashes = computeClashes(schedule.ARTISTS, counts).map((c) => ({
+      ...c,
+      options: c.options.map((o) => ({
+        ...o,
+        count: (counts[o.id] && counts[o.id].total) || 0,
+        voters: voters[o.id] || [],
+        definitely: (pickers[o.id] && pickers[o.id].definitely) || [],
+        maybe: (pickers[o.id] && pickers[o.id].maybe) || [],
+      })),
+    }));
+    return { submissions, clashes, counts, voters };
+  }
+
+  // Tally a clash's duel answers and pick the winning slot.
+  // "none" never wins. "split" competes but loses ties to a concrete show
+  // (prefer a real plan). Options are pre-sorted by rowStart, so the first
+  // show to reach the max wins show-vs-show ties (earliest start).
+  function resolveClash(c, submissions) {
+    const tally = {};
+    const chosenBy = {};
+    for (const s of submissions) {
+      const choice = s.duelAnswers[c.id];
+      if (!choice) continue;
+      tally[choice] = (tally[choice] || 0) + 1;
+      (chosenBy[choice] = chosenBy[choice] || []).push(s.name);
+    }
+    let winner = null, best = 0;
+    for (const o of c.options) {
+      const v = tally[o.id] || 0;
+      if (v > best) { best = v; winner = o.id; }
+    }
+    const splitVotes = tally["split"] || 0;
+    if (splitVotes > best) { winner = "split"; best = splitVotes; } // strictly greater => show wins ties
+    return { tally, chosenBy, winner };
+  }
+
+  app.get("/api/duel", (req, res) => {
+    const name = typeof req.query.name === "string" ? req.query.name.trim() : "";
+    const phase = db.getPhase();
+    if (phase !== "duel") return res.json({ phase, done: false, myAnswers: {}, clashes: [], hasSubmission: false });
+    const { clashes } = buildClashes();
+    const me = name ? db.getByName(name) : null;
+    res.json({
+      phase,
+      done: me ? me.duelDone : false,
+      myAnswers: me ? me.duelAnswers : {},
+      clashes,
+      hasSubmission: !!me,
+    });
+  });
+
+  app.post("/api/duel/answer", (req, res) => {
+    if (db.getPhase() !== "duel") return res.status(409).json({ error: "duel not open" });
+    const { name, clashId, choice } = req.body || {};
+    const nm = typeof name === "string" ? name.trim() : "";
+    if (!nm) return res.status(400).json({ error: "name is required" });
+    const me = db.getByName(nm);
+    if (!me) return res.status(403).json({ error: "no submission for this name" });
+    const { clashes } = buildClashes();
+    const clash = clashes.find((c) => c.id === clashId);
+    if (!clash) return res.status(400).json({ error: "unknown clashId" });
+    const valid = choice === "none" || choice === "split" || clash.options.some((o) => o.id === choice);
+    if (!valid) return res.status(400).json({ error: "invalid choice" });
+    db.saveDuelAnswer(nm, clashId, choice);
+    res.json({ ok: true });
+  });
+
+  app.post("/api/duel/submit", (req, res) => {
+    if (db.getPhase() !== "duel") return res.status(409).json({ error: "duel not open" });
+    const nm = typeof (req.body && req.body.name) === "string" ? req.body.name.trim() : "";
+    if (!nm) return res.status(400).json({ error: "name is required" });
+    db.submitDuel(nm);
+    res.json({ ok: true });
+  });
+
+  app.get("/api/duel/results", (_req, res) => {
+    const { submissions, clashes } = buildClashes();
+    const out = clashes.map((c) => {
+      const { tally, chosenBy, winner } = resolveClash(c, submissions);
+      return { id: c.id, day: c.day, options: c.options, tally, chosenBy, winner };
+    });
+    res.json({ totalDone: submissions.filter((s) => s.duelDone).length, clashes: out });
+  });
+
+  app.get("/api/plan", (_req, res) => {
+    const { submissions, clashes, counts, voters } = buildClashes();
+    const inClash = new Set();
+    clashes.forEach((c) => c.options.forEach((o) => inClash.add(o.id)));
+    const artistById = {};
+    schedule.ARTISTS.forEach((a) => { artistById[a.id] = a; });
+
+    const slotsByDay = {};
+    schedule.DAYS.forEach((d) => { slotsByDay[d.key] = []; });
+
+    // Clash slots (each a deck of the overlapping shows).
+    for (const c of clashes) {
+      const { tally, chosenBy, winner } = resolveClash(c, submissions);
+      slotsByDay[c.day].push({
+        type: "clash", id: c.id, day: c.day, rowStart: c.options[0].rowStart,
+        options: c.options, tally, chosenBy, winner,
+      });
+    }
+    // Single slots: every picked show that is NOT part of a clash.
+    for (const id of Object.keys(counts)) {
+      if (inClash.has(id)) continue;
+      const a = artistById[id];
+      if (!a) continue;
+      slotsByDay[a.day].push({
+        type: "single", day: a.day, rowStart: a.rowStart,
+        show: { id, name: a.name, stage: a.stage, timeLabel: a.timeLabel, rowStart: a.rowStart,
+                count: counts[id].total, voters: voters[id] || [] },
+      });
+    }
+    // Chronological order within each day.
+    Object.keys(slotsByDay).forEach((k) => slotsByDay[k].sort((x, y) => x.rowStart - y.rowStart));
+
+    res.json({
+      totalDone: submissions.filter((s) => s.duelDone).length,
+      days: schedule.DAYS.map((d) => ({ key: d.key, label: d.label })),
+      slotsByDay,
+    });
+  });
+
+  app.get("/plan", (_req, res) => {
+    res.sendFile(path.join(__dirname, "public", "plan.html"));
+  });
+
+  app.get("/admin", (_req, res) => {
+    res.sendFile(path.join(__dirname, "public", "admin.html"));
+  });
+
   // Submit / update one person's picks. Upserts by name.
   // picks: array of { id, tier } (tier "definitely"|"maybe"); bare id strings ok.
   app.post("/api/submit", (req, res) => {
+    if (db.getPhase() !== "picking") {
+      return res.status(409).json({ error: "picking is closed" });
+    }
     const body = req.body || {};
     const name = typeof body.name === "string" ? body.name.trim() : "";
     const picks = Array.isArray(body.picks) ? body.picks : null;

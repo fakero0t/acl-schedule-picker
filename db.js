@@ -13,6 +13,10 @@ function createDb(dbPath) {
       picks      TEXT NOT NULL DEFAULT '[]',
       updated_at INTEGER NOT NULL
     );
+    CREATE TABLE IF NOT EXISTS meta (
+      key   TEXT PRIMARY KEY,
+      value TEXT NOT NULL
+    );
     CREATE TABLE IF NOT EXISTS events (
       id          INTEGER PRIMARY KEY AUTOINCREMENT,
       day         TEXT NOT NULL,
@@ -30,6 +34,15 @@ function createDb(dbPath) {
     db.exec(`ALTER TABLE events ADD COLUMN kind TEXT NOT NULL DEFAULT 'event'`);
   }
 
+  // Migrate existing databases: add duel columns if absent.
+  const cols = db.prepare(`PRAGMA table_info(submissions)`).all().map((c) => c.name);
+  if (!cols.includes("duel_answers")) {
+    db.exec(`ALTER TABLE submissions ADD COLUMN duel_answers TEXT NOT NULL DEFAULT '{}'`);
+  }
+  if (!cols.includes("duel_done")) {
+    db.exec(`ALTER TABLE submissions ADD COLUMN duel_done INTEGER NOT NULL DEFAULT 0`);
+  }
+
   const upsertStmt = db.prepare(`
     INSERT INTO submissions (name, picks, updated_at)
     VALUES (@name, @picks, @updated_at)
@@ -37,7 +50,33 @@ function createDb(dbPath) {
       picks = excluded.picks,
       updated_at = excluded.updated_at
   `);
-  const allStmt = db.prepare(`SELECT name, picks FROM submissions ORDER BY name COLLATE NOCASE`);
+  const allStmt = db.prepare(
+    `SELECT name, picks, duel_answers, duel_done FROM submissions ORDER BY name COLLATE NOCASE`
+  );
+  const byNameStmt = db.prepare(
+    `SELECT name, picks, duel_answers, duel_done FROM submissions WHERE name = ? COLLATE NOCASE`
+  );
+  const answerStmt = db.prepare(
+    `UPDATE submissions SET duel_answers = @answers WHERE name = @name COLLATE NOCASE`
+  );
+  const doneStmt = db.prepare(
+    `UPDATE submissions SET duel_done = 1 WHERE name = @name COLLATE NOCASE`
+  );
+  const getMeta = db.prepare(`SELECT value FROM meta WHERE key = ?`);
+  const setMeta = db.prepare(
+    `INSERT INTO meta (key, value) VALUES (@key, @value)
+     ON CONFLICT(key) DO UPDATE SET value = excluded.value`
+  );
+
+  function rowToObj(r) {
+    if (!r) return null;
+    return {
+      name: r.name,
+      picks: JSON.parse(r.picks),
+      duelAnswers: JSON.parse(r.duel_answers || "{}"),
+      duelDone: r.duel_done === 1,
+    };
+  }
 
   const EVENT_COLS = `id, day, start, end, name, description, location, kind`;
   const insertEventStmt = db.prepare(`
@@ -70,20 +109,31 @@ function createDb(dbPath) {
 
   return {
     raw: db,
-    // Insert or overwrite one person's picks. name is stored trimmed.
     upsert(name, picks) {
-      upsertStmt.run({
-        name: name.trim(),
-        picks: JSON.stringify(picks),
-        updated_at: Date.now(),
-      });
+      upsertStmt.run({ name: name.trim(), picks: JSON.stringify(picks), updated_at: Date.now() });
     },
-    // -> [{ name, picks: [artistId, ...] }]
     all() {
-      return allStmt.all().map((r) => ({
-        name: r.name,
-        picks: JSON.parse(r.picks),
-      }));
+      return allStmt.all().map(rowToObj);
+    },
+    getByName(name) {
+      return rowToObj(byNameStmt.get(name.trim()));
+    },
+    saveDuelAnswer(name, clashId, choice) {
+      const row = byNameStmt.get(name.trim());
+      if (!row) return;
+      const answers = JSON.parse(row.duel_answers || "{}");
+      answers[clashId] = choice;
+      answerStmt.run({ name: name.trim(), answers: JSON.stringify(answers) });
+    },
+    submitDuel(name) {
+      doneStmt.run({ name: name.trim() });
+    },
+    getPhase() {
+      const r = getMeta.get("phase");
+      return r ? r.value : "picking";
+    },
+    setPhase(phase) {
+      setMeta.run({ key: "phase", value: phase });
     },
     // Weekend plans (non-ACL events): {id, day, start, end|null, name, description, location, kind}
     events() {

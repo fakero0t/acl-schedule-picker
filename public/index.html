@@ -20,6 +20,7 @@
     <div class="toolbar">
       <div class="days" id="days"></div>
       <div class="actions">
+        <a class="btn ghost" href="/plan">Group Plan →</a>
         <a class="btn ghost" href="/results">Results →</a>
         <button class="btn" id="editBtn" hidden>Edit</button>
         <button class="btn primary" id="submitBtn">Submit</button>
@@ -38,6 +39,23 @@
       <p>Your name so your friends know who voted for what.</p>
       <input id="nameInput" placeholder="e.g. Ary" maxlength="40" autocomplete="off" />
       <button class="btn primary" id="nameGo" style="width:100%">Let's go</button>
+    </div>
+  </div>
+
+  <!-- duel quiz modal (opens in duel phase) -->
+  <div class="modal-bg" id="duelBg">
+    <div class="modal duel-modal">
+      <div class="duel-head">
+        <div class="duel-kicker">Resolve the conflict</div>
+        <div class="duel-progress" id="duelProgress"></div>
+      </div>
+      <div class="duel-q" id="duelQ"></div>
+      <div class="duel-options" id="duelOptions"></div>
+      <div class="duel-nav">
+        <button class="btn ghost" id="duelBack">← Back</button>
+        <button class="btn" id="duelNext">Next →</button>
+        <button class="btn primary" id="duelSubmit" hidden>Submit</button>
+      </div>
     </div>
   </div>
 
