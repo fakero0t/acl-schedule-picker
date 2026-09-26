@@ -253,6 +253,8 @@ body {
 }
 .duel-opt.sel { border-color: var(--pink); background: var(--pink-tint); }
 .duel-opt.none { opacity: .8; }
+.duel-opt.split { border-style: dashed; }
+.duel-opt.split.sel { border-style: solid; }
 .do-name { font-family: "Anton", sans-serif; font-size: 1.1rem; }
 .do-meta { font-size: .82rem; opacity: .7; }
 .do-votes { font-size: .82rem; font-weight: 700; color: var(--pink); }

@@ -205,8 +205,13 @@
           <span class="do-votes">${o.count} vote${o.count === 1 ? "" : "s"} · ${who}</span>
         </button>`;
     }).join("");
+    const splitSel = chosen === "split" ? " sel" : "";
     const noneSel = chosen === "none" ? " sel" : "";
     els.duelOptions.innerHTML = opts +
+      `<button class="duel-opt split${splitSel}" data-choice="split">
+         <span class="do-name">Keep both — split into groups</span>
+         <span class="do-meta">Some of us go to each show</span>
+       </button>` +
       `<button class="duel-opt none${noneSel}" data-choice="none">
          <span class="do-name">No preference</span>
          <span class="do-meta">Skip this one</span>
