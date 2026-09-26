@@ -14,9 +14,20 @@
   let planData = null;
   let lastJson = null;
   let activeDay = null;
+  let tabsBuilt = false;
   // slotKey -> index of the face currently at the front of that deck.
   // Persists across re-renders so polling / day switches don't reset a swipe.
   const frontIndex = {};
+
+  // Builds the day tabs exactly once, the first time we have a successful
+  // /api/plan payload — whether that's the initial load or a later poll
+  // recovering from a failed/bad first fetch (so tabs never stay stuck empty).
+  function ensureTabsBuilt() {
+    if (tabsBuilt) return;
+    if (!planData || !planData.days || !planData.days.length) return;
+    ACLGrid.buildDayTabs(els.days, planData.days, (key) => showDay(key));
+    tabsBuilt = true;
+  }
 
   function slotKey(slot) {
     return slot.type === "clash" ? `c:${slot.day}:${slot.id}` : `s:${slot.day}:${slot.show.id}`;
@@ -229,6 +240,7 @@
     if (!planData.slotsByDay[activeDay]) {
       activeDay = planData.days[0] ? planData.days[0].key : activeDay;
     }
+    ensureTabsBuilt();
     renderAll();
   }
 
@@ -242,7 +254,7 @@
     }
     if (planData && planData.days && planData.days.length) {
       activeDay = planData.days[0].key;
-      ACLGrid.buildDayTabs(els.days, planData.days, (key) => showDay(key));
+      ensureTabsBuilt();
       renderAll();
     } else {
       els.strip.textContent = "Couldn't load the plan.";
