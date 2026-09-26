@@ -3,6 +3,7 @@ const fs = require("fs");
 const express = require("express");
 const schedule = require("./data/schedule");
 const { createDb } = require("./db");
+const { computeClashes } = require("./data/clashes");
 
 const MAX_NAME = 40;
 const TIERS = new Set(["definitely", "maybe"]);
@@ -73,6 +74,94 @@ function createApp(db) {
     if (!PHASES.has(phase)) return res.status(400).json({ error: "invalid phase" });
     db.setPhase(phase);
     res.json({ ok: true, phase });
+  });
+
+  // Build clashes plus the counts/voters needed to enrich them.
+  function buildClashes() {
+    const submissions = db.all();
+    const counts = {};  // id -> { total }
+    const voters = {};  // id -> [names]
+    for (const s of submissions) {
+      for (const { id } of normalizePicks(s.picks)) {
+        counts[id] = counts[id] || { total: 0 };
+        counts[id].total += 1;
+        (voters[id] = voters[id] || []).push(s.name);
+      }
+    }
+    const clashes = computeClashes(schedule.ARTISTS, counts).map((c) => ({
+      ...c,
+      options: c.options.map((o) => ({
+        ...o,
+        count: (counts[o.id] && counts[o.id].total) || 0,
+        voters: voters[o.id] || [],
+      })),
+    }));
+    return { submissions, clashes };
+  }
+
+  app.get("/api/duel", (req, res) => {
+    const name = typeof req.query.name === "string" ? req.query.name.trim() : "";
+    const phase = db.getPhase();
+    if (phase !== "duel") return res.json({ phase, done: false, myAnswers: {}, clashes: [] });
+    const { clashes } = buildClashes();
+    const me = name ? db.getByName(name) : null;
+    res.json({
+      phase,
+      done: me ? me.duelDone : false,
+      myAnswers: me ? me.duelAnswers : {},
+      clashes,
+    });
+  });
+
+  app.post("/api/duel/answer", (req, res) => {
+    if (db.getPhase() !== "duel") return res.status(409).json({ error: "duel not open" });
+    const { name, clashId, choice } = req.body || {};
+    const nm = typeof name === "string" ? name.trim() : "";
+    if (!nm) return res.status(400).json({ error: "name is required" });
+    const me = db.getByName(nm);
+    if (!me) return res.status(403).json({ error: "no submission for this name" });
+    const { clashes } = buildClashes();
+    const clash = clashes.find((c) => c.id === clashId);
+    if (!clash) return res.status(400).json({ error: "unknown clashId" });
+    const valid = choice === "none" || clash.options.some((o) => o.id === choice);
+    if (!valid) return res.status(400).json({ error: "invalid choice" });
+    db.saveDuelAnswer(nm, clashId, choice);
+    res.json({ ok: true });
+  });
+
+  app.post("/api/duel/submit", (req, res) => {
+    if (db.getPhase() !== "duel") return res.status(409).json({ error: "duel not open" });
+    const nm = typeof (req.body && req.body.name) === "string" ? req.body.name.trim() : "";
+    if (!nm) return res.status(400).json({ error: "name is required" });
+    db.submitDuel(nm);
+    res.json({ ok: true });
+  });
+
+  app.get("/api/duel/results", (_req, res) => {
+    const { submissions, clashes } = buildClashes();
+    const out = clashes.map((c) => {
+      const tally = {};
+      const chosenBy = {};
+      for (const s of submissions) {
+        const choice = s.duelAnswers[c.id];
+        if (!choice) continue;
+        tally[choice] = (tally[choice] || 0) + 1;
+        (chosenBy[choice] = chosenBy[choice] || []).push(s.name);
+      }
+      // Winner: most-chosen real option ("none" excluded); tie -> earliest rowStart.
+      let winner = null, best = -1;
+      for (const o of c.options) {
+        const v = tally[o.id] || 0;
+        if (v > best) { best = v; winner = o.id; }
+      }
+      if (best <= 0) winner = null;
+      return { id: c.id, day: c.day, options: c.options, tally, chosenBy, winner };
+    });
+    res.json({ totalDone: submissions.filter((s) => s.duelDone).length, clashes: out });
+  });
+
+  app.get("/plan", (_req, res) => {
+    res.sendFile(path.join(__dirname, "public", "plan.html"));
   });
 
   // Submit / update one person's picks. Upserts by name.

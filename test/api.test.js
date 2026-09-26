@@ -167,3 +167,93 @@ test("phase defaults to picking, admin can flip, submit freezes in duel", async 
     await close();
   }
 });
+
+// helper: put two overlapping fri shows into the schedule's real ids.
+const scheduleMod = require("../data/schedule");
+function firstOverlappingPair() {
+  const fri = scheduleMod.ARTISTS.filter((a) => a.day === "fri");
+  for (let i = 0; i < fri.length; i++)
+    for (let j = i + 1; j < fri.length; j++)
+      if (fri[i].stage !== fri[j].stage &&
+          fri[i].rowStart < fri[j].rowEnd && fri[j].rowStart < fri[i].rowEnd)
+        return [fri[i], fri[j]];
+  throw new Error("no overlapping pair in schedule");
+}
+
+test("duel flow: clashes surface, answers save case-insensitively, submit sets done", async () => {
+  const { base, close } = await boot();
+  const flip = (phase) => fetch(`${base}/api/admin/phase`, {
+    method: "POST", headers: { "content-type": "application/json" },
+    body: JSON.stringify({ token: "dev", phase }),
+  });
+  try {
+    const [a, b] = firstOverlappingPair();
+    // Two people vote for the two overlapping shows (picking phase).
+    await post(base, "Ary", [{ id: a.id, tier: "definitely" }]);
+    await post(base, "Sam", [{ id: b.id, tier: "definitely" }]);
+
+    // No clashes while picking.
+    let duel = await fetch(`${base}/api/duel?name=Ary`).then((r) => r.json());
+    assert.deepEqual(duel.clashes, []);
+
+    await flip("duel");
+    duel = await fetch(`${base}/api/duel?name=Ary`).then((r) => r.json());
+    assert.ok(duel.clashes.length >= 1, "clash surfaces in duel phase");
+    const clash = duel.clashes.find((c) => c.options.some((o) => o.id === a.id));
+    assert.ok(clash, "our pair forms a clash");
+    const opt = clash.options.find((o) => o.id === a.id);
+    assert.equal(opt.count, 1);
+    assert.deepEqual(opt.voters, ["Ary"]);
+
+    // Unknown clash / invalid choice rejected.
+    let res = await fetch(`${base}/api/duel/answer`, {
+      method: "POST", headers: { "content-type": "application/json" },
+      body: JSON.stringify({ name: "Ary", clashId: "nope", choice: a.id }),
+    });
+    assert.equal(res.status, 400);
+    res = await fetch(`${base}/api/duel/answer`, {
+      method: "POST", headers: { "content-type": "application/json" },
+      body: JSON.stringify({ name: "Ary", clashId: clash.id, choice: "not-an-option" }),
+    });
+    assert.equal(res.status, 400);
+
+    // Person with no submission cannot answer.
+    res = await fetch(`${base}/api/duel/answer`, {
+      method: "POST", headers: { "content-type": "application/json" },
+      body: JSON.stringify({ name: "Ghost", clashId: clash.id, choice: a.id }),
+    });
+    assert.equal(res.status, 403);
+
+    // Valid answer, saved case-insensitively.
+    res = await fetch(`${base}/api/duel/answer`, {
+      method: "POST", headers: { "content-type": "application/json" },
+      body: JSON.stringify({ name: "ary", clashId: clash.id, choice: a.id }),
+    });
+    assert.equal(res.status, 200);
+    duel = await fetch(`${base}/api/duel?name=Ary`).then((r) => r.json());
+    assert.equal(duel.myAnswers[clash.id], a.id);
+    assert.equal(duel.done, false);
+
+    // Sam answers "none"; submit both.
+    await fetch(`${base}/api/duel/answer`, {
+      method: "POST", headers: { "content-type": "application/json" },
+      body: JSON.stringify({ name: "Sam", clashId: clash.id, choice: "none" }),
+    });
+    await fetch(`${base}/api/duel/submit`, {
+      method: "POST", headers: { "content-type": "application/json" },
+      body: JSON.stringify({ name: "Ary" }),
+    });
+    duel = await fetch(`${base}/api/duel?name=Ary`).then((r) => r.json());
+    assert.equal(duel.done, true);
+
+    // Results tally: A has 1 real vote, none excluded from winning.
+    const results = await fetch(`${base}/api/duel/results`).then((r) => r.json());
+    const rc = results.clashes.find((c) => c.id === clash.id);
+    assert.equal(rc.tally[a.id], 1);
+    assert.equal(rc.tally["none"], 1);
+    assert.equal(rc.winner, a.id);
+    assert.deepEqual(rc.chosenBy[a.id], ["Ary"]);
+  } finally {
+    await close();
+  }
+});
