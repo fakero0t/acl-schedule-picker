@@ -383,25 +383,82 @@ body {
   .toolbar { padding: 8px 2px 10px; }
 }
 
-/* ---- duel quiz modal ---- */
-.duel-modal { max-width: 520px; width: 92vw; }
-.duel-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px; }
-.duel-kicker { font-family: "Anton", sans-serif; letter-spacing: .04em; text-transform: uppercase; }
+/* ---- duel matchup modal ---- */
+.duel-modal { max-width: 680px; width: 94vw; }
+.duel-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px; }
+.duel-kicker { font-family: "Anton", sans-serif; letter-spacing: .05em; text-transform: uppercase; }
 .duel-progress { font-weight: 700; opacity: .7; }
-.duel-q { margin: 4px 0 14px; font-weight: 700; }
-.duel-options { display: grid; gap: 10px; }
-.duel-opt {
-  display: grid; text-align: left; gap: 2px; padding: 12px 14px;
-  border: 2px solid var(--box-line); border-radius: 12px; background: #fff; cursor: pointer;
+.duel-q { font-family: "Anton", sans-serif; font-size: 1.5rem; letter-spacing: .02em; margin: 2px 0 14px; text-transform: uppercase; }
+.dq-bolt { color: var(--pink); }
+
+/* per-option colors: card tint (--oct) + choose fill (--oc) */
+.c0 { --oc: #f7891f; --oct: #ffe7cc; }
+.c1 { --oc: #ff2e9a; --oct: #fff0f7; }
+.c2 { --oc: #8b5cf6; --oct: #efe9ff; }
+.c3 { --oc: #14b8a6; --oct: #d7f4f0; }
+
+/* matchup row */
+.vs-row { position: relative; display: flex; align-items: stretch; justify-content: center; gap: 10px; flex-wrap: wrap; }
+.vs-card {
+  flex: 1 1 0; min-width: 160px; text-align: left; padding: 14px; border-radius: 14px;
+  border: 3px solid var(--box-line); background: #fff; cursor: pointer;
+  box-shadow: 0 6px 16px var(--shadow);
 }
-.duel-opt.sel { border-color: var(--pink); background: var(--pink-tint); }
-.duel-opt.none { opacity: .8; }
-.duel-opt.split { border-style: dashed; }
-.duel-opt.split.sel { border-style: solid; }
-.do-name { font-family: "Anton", sans-serif; font-size: 1.1rem; }
-.do-meta { font-size: .82rem; opacity: .7; }
-.do-votes { font-size: .82rem; font-weight: 700; color: var(--pink); }
+.vs-card.c0, .vs-card.c1, .vs-card.c2, .vs-card.c3 { background: var(--oct); border-color: var(--oc); }
+.vs-card.sel { box-shadow: 0 0 0 4px var(--ink), 0 8px 20px var(--shadow); }
+.vc-name { font-family: "Anton", sans-serif; font-size: 1.35rem; line-height: 1.05; }
+.vc-meta { font-size: .8rem; opacity: .75; margin: 2px 0 8px; }
+.vc-tier { font-size: .8rem; margin-top: 3px; }
+.vt-lab { display: inline-block; font-weight: 800; font-size: .64rem; letter-spacing: .04em; padding: 1px 6px; border-radius: 6px; margin-right: 5px; }
+.vt-lab.definitely { background: var(--ink); color: #fff; }
+.vt-lab.maybe { background: #fff; color: var(--ink); border: 1px solid var(--box-line); }
+
+.vs-badge {
+  align-self: center; flex: 0 0 auto; font-family: "Anton", sans-serif; font-size: 1.1rem; color: #fff;
+  background: var(--ink); border-radius: 50%; width: 40px; height: 40px;
+  display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px var(--shadow);
+  animation: vsPop .5s cubic-bezier(.2,1.4,.4,1) .18s both; z-index: 2;
+}
+.vs-flash {
+  position: absolute; inset: 0; pointer-events: none; border-radius: 16px; z-index: 1;
+  background: radial-gradient(circle at center, rgba(255,255,255,.9), rgba(255,255,255,0) 60%);
+  opacity: 0; animation: bang .5s ease-out .16s both;
+}
+
+/* choose row */
+.choose-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+.choose {
+  flex: 1 1 auto; padding: 10px 12px; border-radius: 11px; cursor: pointer; font-weight: 800;
+  font-family: "Archivo", sans-serif; border: 2px solid var(--box-line); background: #fff; color: var(--ink);
+}
+.choose.c0, .choose.c1, .choose.c2, .choose.c3 { border-color: var(--oc); background: var(--oct); }
+.choose.sel { outline: 3px solid var(--ink); outline-offset: 1px; }
+.choose.c0.sel, .choose.c1.sel, .choose.c2.sel, .choose.c3.sel { background: var(--oc); color: #fff; }
+.choose.split { border-style: dashed; }
+.choose.split.sel { border-style: solid; background: #f5b301; border-color: #f5b301; color: var(--ink); }
+.choose.none { opacity: .85; }
+.choose.none.sel { background: var(--ink); color: #fff; opacity: 1; }
+
 .duel-nav { display: flex; gap: 10px; justify-content: space-between; margin-top: 16px; }
+
+/* slam-in animation */
+.vs-card.from-left { animation: slamLeft .5s cubic-bezier(.2,.9,.25,1) both; }
+.vs-card.from-right { animation: slamRight .5s cubic-bezier(.2,.9,.25,1) both; }
+@keyframes slamLeft { 0% { transform: translateX(-130%) rotate(-9deg); opacity: 0; } 72% { transform: translateX(5%) rotate(1.5deg); } 100% { transform: none; opacity: 1; } }
+@keyframes slamRight { 0% { transform: translateX(130%) rotate(9deg); opacity: 0; } 72% { transform: translateX(-5%) rotate(-1.5deg); } 100% { transform: none; opacity: 1; } }
+@keyframes vsPop { 0% { transform: scale(0) rotate(-30deg); opacity: 0; } 60% { transform: scale(1.5) rotate(8deg); } 100% { transform: scale(1) rotate(0); opacity: 1; } }
+@keyframes bang { 0% { opacity: 0; transform: scale(.4); } 25% { opacity: .9; } 100% { opacity: 0; transform: scale(1.25); } }
+
+@media (max-width: 540px) {
+  .vs-row { flex-direction: column; }
+  .vs-card.from-left, .vs-card.from-right { animation-name: slamUp; }
+}
+@keyframes slamUp { 0% { transform: translateY(28px) scale(.94); opacity: 0; } 100% { transform: none; opacity: 1; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .vs-card.from-left, .vs-card.from-right, .vs-badge, .vs-flash { animation: none !important; }
+  .vs-flash { display: none; }
+}
 
 /* ---- plan deck ---- */
 .plan-deck { display: grid; gap: 26px; margin-top: 14px; }

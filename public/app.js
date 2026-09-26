@@ -193,31 +193,48 @@
   function renderDuel() {
     const clash = duel.clashes[duel.i];
     if (!clash) return;
+    const esc = ACLGrid.escapeHtml;
     els.duelProgress.textContent = `${duel.i + 1} / ${duel.clashes.length}`;
+
+    const opts = clash.options; // sorted by rowStart
+    const startOf = (t) => String(t).split("–")[0].trim();
+    const endOf = (t) => { const p = String(t).split("–"); return (p[1] || p[0]).trim(); };
+    const latest = opts.reduce((m, o) => (o.rowEnd > m.rowEnd ? o : m), opts[0]);
     els.duelQ.innerHTML =
-      `You picked more than one show at the same time. Where should the group go?`;
+      `<span class="dq-bolt">⚡</span> CONFLICT · ${esc(startOf(opts[0].timeLabel))}–${esc(endOf(latest.timeLabel))}`;
+
     const chosen = duel.answers[clash.id];
-    const opts = clash.options.map((o) => {
-      const who = o.voters.length ? ACLGrid.escapeHtml(o.voters.join(", ")) : "no votes yet";
-      return `<button class="duel-opt${chosen === o.id ? " sel" : ""}" data-choice="${o.id}">
-          <span class="do-name">${ACLGrid.escapeHtml(o.name)}</span>
-          <span class="do-meta">${ACLGrid.escapeHtml(o.timeLabel)} · ${ACLGrid.escapeHtml(o.stage)}</span>
-          <span class="do-votes">${o.count} vote${o.count === 1 ? "" : "s"} · ${who}</span>
-        </button>`;
-    }).join("");
-    const splitSel = chosen === "split" ? " sel" : "";
-    const noneSel = chosen === "none" ? " sel" : "";
-    els.duelOptions.innerHTML = opts +
-      `<button class="duel-opt split${splitSel}" data-choice="split">
-         <span class="do-name">Keep both — split into groups</span>
-         <span class="do-meta">Some of us go to each show</span>
-       </button>` +
-      `<button class="duel-opt none${noneSel}" data-choice="none">
-         <span class="do-name">No preference</span>
-         <span class="do-meta">Skip this one</span>
-       </button>`;
-    els.duelOptions.querySelectorAll(".duel-opt").forEach((b) =>
+    const cc = (i) => "c" + (i % 4);
+    const tierLine = (lab, names) =>
+      `<div class="vc-tier"><span class="vt-lab ${lab.toLowerCase()}">${lab}</span> ${names.length ? esc(names.join(", ")) : "—"}</div>`;
+
+    // matchup cards with a VS badge between each
+    let cards = "";
+    opts.forEach((o, i) => {
+      if (i > 0) cards += `<div class="vs-badge">VS</div>`;
+      const side = i % 2 === 0 ? "from-left" : "from-right";
+      cards += `<div class="vs-card ${cc(i)} ${side}${chosen === o.id ? " sel" : ""}" data-choice="${o.id}" style="animation-delay:${i * 90}ms">
+          <div class="vc-name">${esc(o.name)}</div>
+          <div class="vc-meta">${esc(o.timeLabel)} · ${esc(o.stage)}</div>
+          ${tierLine("DEFINITELY", o.definitely || [])}
+          ${tierLine("MAYBE", o.maybe || [])}
+        </div>`;
+    });
+
+    // choose row: one color-linked button per artist, then split, then no preference
+    let choose = opts.map((o, i) =>
+      `<button class="choose ${cc(i)}${chosen === o.id ? " sel" : ""}" data-choice="${o.id}">${esc(o.name)}</button>`
+    ).join("");
+    choose += `<button class="choose split${chosen === "split" ? " sel" : ""}" data-choice="split">Keep both — split into groups</button>`;
+    choose += `<button class="choose none${chosen === "none" ? " sel" : ""}" data-choice="none">No preference</button>`;
+
+    els.duelOptions.innerHTML =
+      `<div class="vs-row" data-n="${opts.length}"><div class="vs-flash"></div>${cards}</div>` +
+      `<div class="choose-row">${choose}</div>`;
+
+    els.duelOptions.querySelectorAll("[data-choice]").forEach((b) =>
       b.addEventListener("click", () => chooseDuel(clash.id, b.dataset.choice)));
+
     els.duelBack.disabled = duel.i === 0;
     const answeredAll = duel.clashes.every((c) => duel.answers[c.id] != null);
     const isLast = duel.i === duel.clashes.length - 1;
@@ -298,7 +315,7 @@
         applyLockUI();
         els.submitBtn.hidden = true;
         els.editBtn.hidden = true;
-        els.hint.innerHTML = "Picking is closed. Resolve the clashes below.";
+        els.hint.innerHTML = "Picking is closed. Resolve the conflicts below.";
         await maybeOpenDuel();
       }
     } catch (e) {}

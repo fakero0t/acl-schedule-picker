@@ -109,12 +109,15 @@ function createApp(db) {
   function buildClashes() {
     const submissions = db.all();
     const counts = {};  // id -> { total }
-    const voters = {};  // id -> [names]
+    const voters = {};  // id -> [names]  (flat, any tier)
+    const pickers = {}; // id -> { definitely: [names], maybe: [names] }
     for (const s of submissions) {
-      for (const { id } of normalizePicks(s.picks)) {
+      for (const { id, tier } of normalizePicks(s.picks)) {
         counts[id] = counts[id] || { total: 0 };
         counts[id].total += 1;
         (voters[id] = voters[id] || []).push(s.name);
+        const pt = (pickers[id] = pickers[id] || { definitely: [], maybe: [] });
+        pt[tier === "maybe" ? "maybe" : "definitely"].push(s.name);
       }
     }
     const clashes = computeClashes(schedule.ARTISTS, counts).map((c) => ({
@@ -123,6 +126,8 @@ function createApp(db) {
         ...o,
         count: (counts[o.id] && counts[o.id].total) || 0,
         voters: voters[o.id] || [],
+        definitely: (pickers[o.id] && pickers[o.id].definitely) || [],
+        maybe: (pickers[o.id] && pickers[o.id].maybe) || [],
       })),
     }));
     return { submissions, clashes, counts, voters };
