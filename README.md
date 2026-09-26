@@ -1,17 +1,36 @@
-# ACL Weekend 1 — Schedule Picker
+# ACL Weekend 1 — Schedule Planner
 
-A shareable web app that duplicates the **Austin City Limits 2026 Weekend One**
-schedule (Fri/Sat/Sun) and lets you and your friends each tap the artists you
-want to see, submit, and view a live group results board of who's seeing what.
+A shared planner for your friend group at **Austin City Limits 2026, Weekend One** (Oct 2–4).
 
-- **`/`** — the picker. Day toggle (Fri/Sat/Sun), tap artist boxes (press-down
-  feel + haptic on mobile), **Submit**, then **Edit** to change and resubmit.
-- **`/results`** — live master view: each box shows a vote count, a highlighted
-  border when picked, background color scaled by popularity (cream → orange →
-  pink), and who voted on hover/tap. Auto-refreshes every 3s.
+<p>
+  <img src="docs/screenshots/picker.png" width="260" alt="Picking artists" />
+  <img src="docs/screenshots/results.png" width="260" alt="Group results" />
+  <img src="docs/screenshots/weekend.png" width="260" alt="The Weekend view" />
+</p>
 
-Everyone opens the same link and enters their name once (stored locally + with
-their submission). One row per person in SQLite; resubmitting overwrites.
+## What it does
+
+**Pick your sets**
+- The full ACL schedule for Friday, Saturday and Sunday, laid out by stage and time
+- Tap an artist, then mark it **Definitely** or **Maybe**
+- Enter your name once; hit **Submit** when you're done and **Edit** any time to change
+- Unsaved picks stick around if you close the page
+
+**See the group's picks**
+- One board showing every set someone picked
+- Color shows how popular a set is, from a few people to crowd favorite
+- Tap a set to see exactly who's going (and who's a maybe)
+- Updates on its own as friends submit
+
+**The Weekend** (open `/weekend`)
+- One timeline per day with the ACL sets your group picked and any plans people add (brunch, pregames, late shows)
+- Anyone can add, edit or delete a plan, with a time, place and notes
+- Sets or plans at the same time show side by side, so clashes are easy to spot
+- Free time between things is shown, so you can see gaps in the day
+- A map of Austin pins every plan; tap a pin to jump to it
+
+<details>
+<summary>Running it yourself</summary>
 
 ## Run locally
 
@@ -43,3 +62,5 @@ reset on redeploy/restart. Fine for a quick weekend, not for long-term storage.
 
 Node + Express, `better-sqlite3`, vanilla HTML/CSS/JS. Schedule data lives in
 `data/schedule.js` (the single source of truth for the grid and valid pick ids).
+
+</details>
