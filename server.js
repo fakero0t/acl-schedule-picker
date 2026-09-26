@@ -164,6 +164,10 @@ function createApp(db) {
     res.sendFile(path.join(__dirname, "public", "plan.html"));
   });
 
+  app.get("/admin", (_req, res) => {
+    res.sendFile(path.join(__dirname, "public", "admin.html"));
+  });
+
   // Submit / update one person's picks. Upserts by name.
   // picks: array of { id, tier } (tier "definitely"|"maybe"); bare id strings ok.
   app.post("/api/submit", (req, res) => {
