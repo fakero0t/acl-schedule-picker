@@ -15,6 +15,7 @@
   let lastJson = null;
   let activeDay = null;
   let tabsBuilt = false;
+  let swiping = false; // true while a touch swipe is in progress (defer re-render)
   // slotKey -> index of the face currently at the front of that deck.
   // Persists across re-renders so polling / day switches don't reset a swipe.
   const frontIndex = {};
@@ -174,7 +175,7 @@
     let sx = 0, sy = 0, dx = 0, dy = 0, tracking = false;
     deckEl.addEventListener("touchstart", (e) => {
       const t = e.touches[0];
-      sx = t.clientX; sy = t.clientY; dx = 0; dy = 0; tracking = true;
+      sx = t.clientX; sy = t.clientY; dx = 0; dy = 0; tracking = true; swiping = true;
     }, { passive: true });
     deckEl.addEventListener("touchmove", (e) => {
       if (!tracking) return;
@@ -182,6 +183,7 @@
       dx = t.clientX - sx; dy = t.clientY - sy;
     }, { passive: true });
     deckEl.addEventListener("touchend", () => {
+      swiping = false;
       if (!tracking) return;
       tracking = false;
       if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy)) go(dx < 0 ? 1 : -1);
@@ -233,6 +235,7 @@
     try { text = await fetch("/api/plan").then((r) => r.text()); }
     catch (e) { return; }
     if (text === lastJson) return; // unchanged: skip re-render so an in-progress swipe isn't disrupted
+    if (swiping) return; // changed, but a swipe is in progress: defer (don't set lastJson) so the next poll applies it
     lastJson = text;
     let data;
     try { data = JSON.parse(text); } catch (e) { return; }
