@@ -2,6 +2,7 @@
 (function () {
   const NAME_KEY = "acl_name";
   const DRAFT_PREFIX = "acl_draft_v1_";
+  const PENDING_KEY = "acl_pending_submit_v1"; // {name, picks} waiting for signal
   let name = null;
   let selected = new Map(); // id -> "definitely" | "maybe"
   let locked = false;       // true after a successful submit (read-only until Edit)
@@ -129,27 +130,55 @@
     els.grid.querySelectorAll(".box").forEach(updateBox);
   }
 
+  function postPicks(body) {
+    return ACLNet.request("/api/submit", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(body),
+    });
+  }
+
+  function onSubmitted() {
+    locked = true;
+    clearDraft(); // now saved server-side
+    applyLockUI();
+    toast("Submitted! 🎉");
+  }
+
   async function submit() {
     if (!name) { openModal(); return; }
     els.submitBtn.disabled = true;
+    const body = { name, picks: [...selected.entries()].map(([id, tier]) => ({ id, tier })) };
     try {
-      const picks = [...selected.entries()].map(([id, tier]) => ({ id, tier }));
-      const res = await fetch("/api/submit", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ name, picks }),
-      });
+      const res = await postPicks(body);
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "submit failed");
-      locked = true;
-      clearDraft(); // now saved server-side
-      applyLockUI();
-      toast("Submitted! 🎉");
+      try { localStorage.removeItem(PENDING_KEY); } catch (e) {}
+      onSubmitted();
     } catch (e) {
-      toast("Error: " + e.message);
+      if (e.offline) {
+        // No signal: keep it and send automatically once the connection is back.
+        try { localStorage.setItem(PENDING_KEY, JSON.stringify(body)); } catch (err) {}
+        toast("No signal — will submit when you're back online");
+      } else {
+        toast("Error: " + e.message);
+      }
     } finally {
       els.submitBtn.disabled = false;
     }
+  }
+
+  // Send a submit that was queued while offline.
+  async function flushPending() {
+    let body = null;
+    try { body = JSON.parse(localStorage.getItem(PENDING_KEY)); } catch (e) {}
+    if (!body) return;
+    try {
+      const res = await postPicks(body);
+      if (!res.ok && res.status !== 400) return; // server hiccup: try again later
+      localStorage.removeItem(PENDING_KEY); // sent (or rejected as invalid: don't retry forever)
+      if (res.ok && name && body.name.toLowerCase() === name.toLowerCase()) onSubmitted();
+    } catch (e) { /* still offline */ }
   }
 
   function edit() { locked = false; applyLockUI(); toast("Edit mode"); }
@@ -162,26 +191,28 @@
     if (!name) return;
     localStorage.setItem(NAME_KEY, name);
     closeModal();
-    try {
-      const draft = loadDraft();
-      const me = await fetch("/api/me?name=" + encodeURIComponent(name)).then((r) => r.json());
-      if (draft && draft.length) {
-        // Unsubmitted in-progress work wins (survives a refresh, stays editable).
-        selected = new Map(draft.map((p) => [p.id, p.tier || "definitely"]));
-        locked = false;
-        repaint();
-      } else if (me.picks && me.picks.length) {
-        selected = new Map(me.picks.map((p) => [p.id, p.tier || "definitely"]));
-        locked = true; // they already submitted before
-        repaint();
-      }
-    } catch (e) {}
+    const draft = loadDraft();
+    if (draft && draft.length) {
+      // Unsubmitted in-progress work wins (survives a refresh, stays editable, needs no signal).
+      selected = new Map(draft.map((p) => [p.id, p.tier || "definitely"]));
+      locked = false;
+      repaint();
+    } else {
+      try {
+        const me = await ACLNet.request("/api/me?name=" + encodeURIComponent(name)).then((r) => r.json());
+        if (me.picks && me.picks.length) {
+          selected = new Map(me.picks.map((p) => [p.id, p.tier || "definitely"]));
+          locked = true; // they already submitted before
+          repaint();
+        }
+      } catch (e) {}
+    }
     applyLockUI();
     toast("Hi, " + name + "!");
   }
 
   async function init() {
-    const data = await fetch("/api/schedule").then((r) => r.json());
+    const data = (await ACLNet.getJSON("/api/schedule")).data;
     ACLGrid.buildDayTabs(els.days, data.days, (dayKey) => gridApi.show(dayKey));
     gridApi = ACLGrid.render(els.grid, data, decorateBox);
 
@@ -195,6 +226,9 @@
     else openModal();
 
     applyLockUI();
+    flushPending();
+    window.addEventListener("online", flushPending);
+    document.addEventListener("visibilitychange", () => { if (!document.hidden) flushPending(); });
   }
 
   init();

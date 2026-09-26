@@ -1,6 +1,6 @@
 // Results page: live master view — counts, popularity color, who-voted tooltip.
 (function () {
-  const POLL_MS = 3000;
+  const POLL_MS = 30000;
   let gridApi = null;
   let scheduleData = null;
   const boxById = {}; // id -> box element
@@ -12,6 +12,7 @@
     tip: document.getElementById("tip"),
     tipTitle: document.querySelector("#tip .t-title"),
     tipNames: document.querySelector("#tip .t-names"),
+    netStatus: document.getElementById("netStatus"),
   };
 
   // popularity color ramp: cream -> orange -> hot pink, by ratio 0..1
@@ -97,19 +98,21 @@
 
   async function refresh() {
     try {
-      const results = await fetch("/api/results").then((r) => r.json());
-      paint(results);
-    } catch (e) { /* keep last paint on transient error */ }
+      const r = await ACLNet.getJSON("/api/results");
+      paint(r.data);
+      ACLNet.showStatus(els.netStatus, r);
+    } catch (e) { /* nothing saved yet and no signal: keep last paint */ }
   }
 
   async function init() {
-    scheduleData = await fetch("/api/schedule").then((r) => r.json());
+    scheduleData = (await ACLNet.getJSON("/api/schedule")).data;
     ACLGrid.buildDayTabs(els.days, scheduleData.days, (dayKey) => gridApi.show(dayKey));
     gridApi = ACLGrid.render(els.grid, scheduleData, decorateBox);
+    // Paint the last-saved results instantly, then fetch fresh ones right away.
+    const saved = ACLNet.cached("/api/results");
+    if (saved) { paint(saved.data); ACLNet.showStatus(els.netStatus, { t: saved.t, fresh: false, pending: true }); }
     await refresh();
-    setInterval(refresh, POLL_MS);
-    // refresh promptly when tab regains focus
-    document.addEventListener("visibilitychange", () => { if (!document.hidden) refresh(); });
+    ACLNet.poll(refresh, POLL_MS);
   }
 
   init();

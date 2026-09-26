@@ -1,6 +1,7 @@
 const path = require("path");
 const fs = require("fs");
 const express = require("express");
+const compression = require("compression");
 const schedule = require("./data/schedule");
 const { createDb } = require("./db");
 
@@ -52,6 +53,7 @@ function normalizePicks(picks) {
 // Build an Express app around a given db handle (so tests can inject :memory:).
 function createApp(db) {
   const app = express();
+  app.use(compression()); // gzip: smaller payloads over weak festival signal
   app.use(express.json({ limit: "64kb" }));
   app.use(express.static(path.join(__dirname, "public")));
 
