@@ -17,6 +17,13 @@
     modalBg: document.getElementById("modalBg"),
     nameInput: document.getElementById("nameInput"),
     nameGo: document.getElementById("nameGo"),
+    duelBg: document.getElementById("duelBg"),
+    duelProgress: document.getElementById("duelProgress"),
+    duelQ: document.getElementById("duelQ"),
+    duelOptions: document.getElementById("duelOptions"),
+    duelBack: document.getElementById("duelBack"),
+    duelNext: document.getElementById("duelNext"),
+    duelSubmit: document.getElementById("duelSubmit"),
   };
 
   function toast(msg) {
@@ -180,6 +187,85 @@
     toast("Hi, " + name + "!");
   }
 
+  // ---- duel quiz ----
+  let duel = { clashes: [], answers: {}, i: 0, done: false };
+
+  function escapeHtml(s) { return ACLGrid.escapeHtml(s); }
+
+  function renderDuel() {
+    const clash = duel.clashes[duel.i];
+    if (!clash) return;
+    els.duelProgress.textContent = `${duel.i + 1} / ${duel.clashes.length}`;
+    els.duelQ.innerHTML =
+      `You picked more than one show at the same time. Where should the group go?`;
+    const chosen = duel.answers[clash.id];
+    const opts = clash.options.map((o) => {
+      const who = o.voters.length ? escapeHtml(o.voters.join(", ")) : "no votes yet";
+      return `<button class="duel-opt${chosen === o.id ? " sel" : ""}" data-choice="${o.id}">
+          <span class="do-name">${escapeHtml(o.name)}</span>
+          <span class="do-meta">${escapeHtml(o.timeLabel)} · ${escapeHtml(o.stage)}</span>
+          <span class="do-votes">${o.count} vote${o.count === 1 ? "" : "s"} · ${who}</span>
+        </button>`;
+    }).join("");
+    const noneSel = chosen === "none" ? " sel" : "";
+    els.duelOptions.innerHTML = opts +
+      `<button class="duel-opt none${noneSel}" data-choice="none">
+         <span class="do-name">No preference</span>
+         <span class="do-meta">Skip this one</span>
+       </button>`;
+    els.duelOptions.querySelectorAll(".duel-opt").forEach((b) =>
+      b.addEventListener("click", () => chooseDuel(clash.id, b.dataset.choice)));
+    els.duelBack.disabled = duel.i === 0;
+    const answeredAll = duel.clashes.every((c) => duel.answers[c.id] != null);
+    const isLast = duel.i === duel.clashes.length - 1;
+    els.duelNext.hidden = isLast;
+    els.duelSubmit.hidden = !isLast;
+    els.duelSubmit.disabled = !answeredAll;
+  }
+
+  async function chooseDuel(clashId, choice) {
+    duel.answers[clashId] = choice;
+    renderDuel();
+    try {
+      await fetch("/api/duel/answer", {
+        method: "POST", headers: { "content-type": "application/json" },
+        body: JSON.stringify({ name, clashId, choice }),
+      });
+    } catch (e) {}
+    if (duel.i < duel.clashes.length - 1) { duel.i++; renderDuel(); }
+  }
+
+  async function submitDuel() {
+    els.duelSubmit.disabled = true;
+    try {
+      await fetch("/api/duel/submit", {
+        method: "POST", headers: { "content-type": "application/json" },
+        body: JSON.stringify({ name }),
+      });
+      duel.done = true;
+      els.duelBg.classList.remove("show");
+      toast("Locked in! See the group plan.");
+      setTimeout(() => (window.location.href = "/plan"), 900);
+    } catch (e) {
+      els.duelSubmit.disabled = false;
+      toast("Error saving — try again");
+    }
+  }
+
+  async function maybeOpenDuel() {
+    if (!name) return;
+    let data;
+    try { data = await fetch("/api/duel?name=" + encodeURIComponent(name)).then((r) => r.json()); }
+    catch (e) { return; }
+    if (data.phase !== "duel" || data.done || !data.clashes.length) return;
+    duel = { clashes: data.clashes, answers: data.myAnswers || {}, i: 0, done: false };
+    // resume at first unanswered clash
+    const firstUnanswered = duel.clashes.findIndex((c) => duel.answers[c.id] == null);
+    duel.i = firstUnanswered === -1 ? 0 : firstUnanswered;
+    renderDuel();
+    els.duelBg.classList.add("show");
+  }
+
   async function init() {
     const data = await fetch("/api/schedule").then((r) => r.json());
     ACLGrid.buildDayTabs(els.days, data.days, (dayKey) => gridApi.show(dayKey));
@@ -187,6 +273,9 @@
 
     els.submitBtn.addEventListener("click", submit);
     els.editBtn.addEventListener("click", edit);
+    els.duelBack.addEventListener("click", () => { if (duel.i > 0) { duel.i--; renderDuel(); } });
+    els.duelNext.addEventListener("click", () => { if (duel.i < duel.clashes.length - 1) { duel.i++; renderDuel(); } });
+    els.duelSubmit.addEventListener("click", submitDuel);
     els.nameGo.addEventListener("click", () => setName(els.nameInput.value));
     els.nameInput.addEventListener("keydown", (e) => { if (e.key === "Enter") setName(els.nameInput.value); });
 
@@ -195,6 +284,18 @@
     else openModal();
 
     applyLockUI();
+
+    try {
+      const { phase } = await fetch("/api/phase").then((r) => r.json());
+      if (phase === "duel") {
+        locked = true;               // freeze the picker (reuse lock UI)
+        applyLockUI();
+        els.submitBtn.hidden = true;
+        els.editBtn.hidden = true;
+        els.hint.innerHTML = "Picking is closed. Resolve the clashes below.";
+        await maybeOpenDuel();
+      }
+    } catch (e) {}
   }
 
   init();

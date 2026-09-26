@@ -238,3 +238,21 @@ body {
   .wrap { padding: 10px; }
   .toolbar { padding: 8px 2px 10px; }
 }
+
+/* ---- duel quiz modal ---- */
+.duel-modal { max-width: 520px; width: 92vw; }
+.duel-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px; }
+.duel-kicker { font-family: "Anton", sans-serif; letter-spacing: .04em; text-transform: uppercase; }
+.duel-progress { font-weight: 700; opacity: .7; }
+.duel-q { margin: 4px 0 14px; font-weight: 700; }
+.duel-options { display: grid; gap: 10px; }
+.duel-opt {
+  display: grid; text-align: left; gap: 2px; padding: 12px 14px;
+  border: 2px solid rgba(0,0,0,.15); border-radius: 12px; background: #fff; cursor: pointer;
+}
+.duel-opt.sel { border-color: #ff2e9a; background: #fff0f7; }
+.duel-opt.none { opacity: .8; }
+.do-name { font-family: "Anton", sans-serif; font-size: 1.1rem; }
+.do-meta { font-size: .82rem; opacity: .7; }
+.do-votes { font-size: .82rem; font-weight: 700; color: #d81b78; }
+.duel-nav { display: flex; gap: 10px; justify-content: space-between; margin-top: 16px; }
