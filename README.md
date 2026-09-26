@@ -32,11 +32,21 @@ A shared planner for your friend group at **Austin City Limits 2026, Weekend One
 - Free time between things is shown, so you can see gaps in the day
 - A map of Austin pins every plan; tap a pin to jump to it
 
-<img src="docs/screenshots/desktop-map.png" width="480" alt="Map of Austin with a pin for each plan and the ACL sets" />
+**Find your friends** (tap **Map**)
+
+<img src="docs/screenshots/desktop-festival-map.png" alt="Festival map with friends and a meeting point" />
+
+- An aerial map of Zilker Park with every stage, area and entrance labeled
+- Share where you are and see your friends as dots, with who's near which stage
+- Drop a pin by hand if GPS is off
+- Set one **Meet here** spot for the whole group
+- **Find me** flashes your name full-screen so friends can spot you in the crowd
+- Locations disappear after 30 minutes, so nothing lingers
 
 ## On your phone
 
 <p>
   <img src="docs/screenshots/picker.png" width="280" alt="Picking artists on mobile" />
   <img src="docs/screenshots/weekend.png" width="280" alt="The Weekend on mobile" />
+  <img src="docs/screenshots/festival-map.png" width="280" alt="Find your friends on mobile" />
 </p>
