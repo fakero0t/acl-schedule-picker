@@ -7,21 +7,16 @@
     list: document.getElementById("planList"),
   };
 
-  function optName(clash, id) {
-    if (id === "none") return "No preference";
-    const o = clash.options.find((x) => x.id === id);
-    return o ? o.name : id;
-  }
-
   function card(clash) {
     const rows = clash.options.map((o) => {
       const n = clash.tally[o.id] || 0;
       const who = (clash.chosenBy[o.id] || []).map(esc).join(", ");
-      const win = clash.winner === o.id ? " win" : "";
+      const isWin = clash.winner === o.id;
+      const win = isWin ? " win" : "";
       return `<div class="plan-opt${win}">
           <div class="po-top"><span class="po-name">${esc(o.name)}</span>
             <span class="po-count">${n}</span></div>
-          <div class="po-meta">${esc(o.timeLabel)} · ${esc(o.stage)}${clash.winner === o.id ? " · 👑 group pick" : ""}</div>
+          <div class="po-meta">${esc(o.timeLabel)} · ${esc(o.stage)}${isWin ? " · 👑 group pick" : ""}</div>
           ${who ? `<div class="po-who">${who}</div>` : ""}
         </div>`;
     }).join("");
@@ -39,7 +34,7 @@
     let data;
     try { data = await fetch("/api/duel/results").then((r) => r.json()); }
     catch (e) { return; }
-    if (!data.clashes.length) {
+    if (!data.clashes?.length) {
       els.strip.textContent = "No clashes to resolve yet.";
       els.list.innerHTML = "";
       return;

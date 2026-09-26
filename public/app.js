@@ -239,10 +239,11 @@
   async function submitDuel() {
     els.duelSubmit.disabled = true;
     try {
-      await fetch("/api/duel/submit", {
+      const res = await fetch("/api/duel/submit", {
         method: "POST", headers: { "content-type": "application/json" },
         body: JSON.stringify({ name }),
       });
+      if (!res.ok) throw new Error("submit failed");
       els.duelBg.classList.remove("show");
       toast("Locked in! See the group plan.");
       setTimeout(() => (window.location.href = "/plan"), 900);
@@ -257,7 +258,7 @@
     let data;
     try { data = await fetch("/api/duel?name=" + encodeURIComponent(name)).then((r) => r.json()); }
     catch (e) { return; }
-    if (data.phase !== "duel" || data.done || !data.clashes.length) return;
+    if (data.phase !== "duel" || data.done || !data.hasSubmission || !data.clashes.length) return;
     duel = { clashes: data.clashes, answers: data.myAnswers || {}, i: 0, done: false };
     // resume at first unanswered clash
     const firstUnanswered = duel.clashes.findIndex((c) => duel.answers[c.id] == null);

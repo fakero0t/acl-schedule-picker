@@ -195,10 +195,16 @@ test("duel flow: clashes surface, answers save case-insensitively, submit sets d
     // No clashes while picking.
     let duel = await fetch(`${base}/api/duel?name=Ary`).then((r) => r.json());
     assert.deepEqual(duel.clashes, []);
+    assert.equal(duel.hasSubmission, false, "no phase flip yet, hasSubmission still reported false");
 
     await flip("duel");
     duel = await fetch(`${base}/api/duel?name=Ary`).then((r) => r.json());
     assert.ok(duel.clashes.length >= 1, "clash surfaces in duel phase");
+    assert.equal(duel.hasSubmission, true, "Ary has a submission");
+
+    // A name that never submitted gets hasSubmission: false, even with clashes present.
+    const ghostDuel = await fetch(`${base}/api/duel?name=NeverSubmitted`).then((r) => r.json());
+    assert.equal(ghostDuel.hasSubmission, false);
     const clash = duel.clashes.find((c) => c.options.some((o) => o.id === a.id));
     assert.ok(clash, "our pair forms a clash");
     const opt = clash.options.find((o) => o.id === a.id);

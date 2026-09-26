@@ -102,7 +102,7 @@ function createApp(db) {
   app.get("/api/duel", (req, res) => {
     const name = typeof req.query.name === "string" ? req.query.name.trim() : "";
     const phase = db.getPhase();
-    if (phase !== "duel") return res.json({ phase, done: false, myAnswers: {}, clashes: [] });
+    if (phase !== "duel") return res.json({ phase, done: false, myAnswers: {}, clashes: [], hasSubmission: false });
     const { clashes } = buildClashes();
     const me = name ? db.getByName(name) : null;
     res.json({
@@ -110,6 +110,7 @@ function createApp(db) {
       done: me ? me.duelDone : false,
       myAnswers: me ? me.duelAnswers : {},
       clashes,
+      hasSubmission: !!me,
     });
   });
 
