@@ -263,3 +263,124 @@ test("duel flow: clashes surface, answers save case-insensitively, submit sets d
     await close();
   }
 });
+
+// helper: pick a real artist elsewhere on the given day that doesn't overlap either of a/b.
+function nonOverlappingPick(day, a, b) {
+  return scheduleMod.ARTISTS.find(
+    (x) =>
+      x.day === day &&
+      x.id !== a.id &&
+      x.id !== b.id &&
+      !(x.rowStart < a.rowEnd && a.rowStart < x.rowEnd) &&
+      !(x.rowStart < b.rowEnd && b.rowStart < x.rowEnd)
+  );
+}
+
+test("duel/answer accepts the 'split' sentinel", async () => {
+  const { base, close } = await boot();
+  const flip = (phase) => fetch(`${base}/api/admin/phase`, {
+    method: "POST", headers: { "content-type": "application/json" },
+    body: JSON.stringify({ token: "dev", phase }),
+  });
+  try {
+    const [a, b] = firstOverlappingPair();
+    await post(base, "Ary", [{ id: a.id, tier: "definitely" }]);
+    await post(base, "Sam", [{ id: b.id, tier: "definitely" }]);
+    await flip("duel");
+
+    const duel = await fetch(`${base}/api/duel?name=Ary`).then((r) => r.json());
+    const clash = duel.clashes.find((c) => c.options.some((o) => o.id === a.id));
+    assert.ok(clash, "our pair forms a clash");
+
+    const res = await fetch(`${base}/api/duel/answer`, {
+      method: "POST", headers: { "content-type": "application/json" },
+      body: JSON.stringify({ name: "Ary", clashId: clash.id, choice: "split" }),
+    });
+    assert.equal(res.status, 200);
+  } finally {
+    await close();
+  }
+});
+
+test("duel/results: 'split' wins with strictly more votes, but loses ties to a show; 'none' never wins", async () => {
+  const { base, close } = await boot();
+  const flip = (phase) => fetch(`${base}/api/admin/phase`, {
+    method: "POST", headers: { "content-type": "application/json" },
+    body: JSON.stringify({ token: "dev", phase }),
+  });
+  const answer = (name, clashId, choice) =>
+    fetch(`${base}/api/duel/answer`, {
+      method: "POST", headers: { "content-type": "application/json" },
+      body: JSON.stringify({ name, clashId, choice }),
+    });
+  try {
+    const [a, b] = firstOverlappingPair();
+    await post(base, "Ary", [{ id: a.id, tier: "definitely" }]);
+    await post(base, "Sam", [{ id: b.id, tier: "definitely" }]);
+    await post(base, "Deb", [{ id: a.id, tier: "definitely" }]);
+    await flip("duel");
+
+    const duel = await fetch(`${base}/api/duel?name=Ary`).then((r) => r.json());
+    const clash = duel.clashes.find((c) => c.options.some((o) => o.id === a.id));
+    assert.ok(clash);
+
+    // split is the plurality: 2 split vs 1 for `a`.
+    await answer("Ary", clash.id, "split");
+    await answer("Sam", clash.id, "split");
+    await answer("Deb", clash.id, a.id);
+
+    let results = await fetch(`${base}/api/duel/results`).then((r) => r.json());
+    let rc = results.clashes.find((c) => c.id === clash.id);
+    assert.equal(rc.winner, "split", "split has strictly more votes so it wins");
+
+    // Now tie it up: 2 split vs 2 for `a` -> show wins the tie, never split.
+    await answer("Sam", clash.id, a.id);
+    results = await fetch(`${base}/api/duel/results`).then((r) => r.json());
+    rc = results.clashes.find((c) => c.id === clash.id);
+    assert.equal(rc.winner, a.id, "tie between split and a show goes to the show");
+    assert.notEqual(rc.winner, "none");
+  } finally {
+    await close();
+  }
+});
+
+test("GET /api/plan returns chronological per-day slots (clash decks + single picks)", async () => {
+  const { base, close } = await boot();
+  const flip = (phase) => fetch(`${base}/api/admin/phase`, {
+    method: "POST", headers: { "content-type": "application/json" },
+    body: JSON.stringify({ token: "dev", phase }),
+  });
+  try {
+    const [a, b] = firstOverlappingPair();
+    const single = nonOverlappingPick(a.day, a, b);
+    assert.ok(single, "expected a non-overlapping show on the same day");
+
+    await post(base, "Ary", [
+      { id: a.id, tier: "definitely" },
+      { id: single.id, tier: "definitely" },
+    ]);
+    await post(base, "Sam", [{ id: b.id, tier: "definitely" }]);
+    await flip("duel");
+
+    const plan = await fetch(`${base}/api/plan`).then((r) => r.json());
+    assert.ok(Array.isArray(plan.days) && plan.days.length > 0);
+    assert.ok(plan.days.every((d) => typeof d.key === "string" && typeof d.label === "string"));
+
+    const daySlots = plan.slotsByDay[a.day];
+    assert.ok(Array.isArray(daySlots) && daySlots.length >= 2);
+
+    const clashSlot = daySlots.find((s) => s.type === "clash" && s.options.some((o) => o.id === a.id));
+    assert.ok(clashSlot, "expected a clash slot for the overlapping pair");
+    assert.ok("winner" in clashSlot);
+
+    const singleSlot = daySlots.find((s) => s.type === "single" && s.show && s.show.id === single.id);
+    assert.ok(singleSlot, "expected a single slot for the non-clashed pick");
+
+    // Chronological order within the day.
+    for (let i = 1; i < daySlots.length; i++) {
+      assert.ok(daySlots[i - 1].rowStart <= daySlots[i].rowStart, "slots must be sorted by rowStart");
+    }
+  } finally {
+    await close();
+  }
+});

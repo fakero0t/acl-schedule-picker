@@ -96,7 +96,30 @@ function createApp(db) {
         voters: voters[o.id] || [],
       })),
     }));
-    return { submissions, clashes };
+    return { submissions, clashes, counts, voters };
+  }
+
+  // Tally a clash's duel answers and pick the winning slot.
+  // "none" never wins. "split" competes but loses ties to a concrete show
+  // (prefer a real plan). Options are pre-sorted by rowStart, so the first
+  // show to reach the max wins show-vs-show ties (earliest start).
+  function resolveClash(c, submissions) {
+    const tally = {};
+    const chosenBy = {};
+    for (const s of submissions) {
+      const choice = s.duelAnswers[c.id];
+      if (!choice) continue;
+      tally[choice] = (tally[choice] || 0) + 1;
+      (chosenBy[choice] = chosenBy[choice] || []).push(s.name);
+    }
+    let winner = null, best = 0;
+    for (const o of c.options) {
+      const v = tally[o.id] || 0;
+      if (v > best) { best = v; winner = o.id; }
+    }
+    const splitVotes = tally["split"] || 0;
+    if (splitVotes > best) { winner = "split"; best = splitVotes; } // strictly greater => show wins ties
+    return { tally, chosenBy, winner };
   }
 
   app.get("/api/duel", (req, res) => {
@@ -124,7 +147,7 @@ function createApp(db) {
     const { clashes } = buildClashes();
     const clash = clashes.find((c) => c.id === clashId);
     if (!clash) return res.status(400).json({ error: "unknown clashId" });
-    const valid = choice === "none" || clash.options.some((o) => o.id === choice);
+    const valid = choice === "none" || choice === "split" || clash.options.some((o) => o.id === choice);
     if (!valid) return res.status(400).json({ error: "invalid choice" });
     db.saveDuelAnswer(nm, clashId, choice);
     res.json({ ok: true });
@@ -141,24 +164,49 @@ function createApp(db) {
   app.get("/api/duel/results", (_req, res) => {
     const { submissions, clashes } = buildClashes();
     const out = clashes.map((c) => {
-      const tally = {};
-      const chosenBy = {};
-      for (const s of submissions) {
-        const choice = s.duelAnswers[c.id];
-        if (!choice) continue;
-        tally[choice] = (tally[choice] || 0) + 1;
-        (chosenBy[choice] = chosenBy[choice] || []).push(s.name);
-      }
-      // Winner: most-chosen real option ("none" excluded); tie -> earliest rowStart.
-      let winner = null, best = -1;
-      for (const o of c.options) {
-        const v = tally[o.id] || 0;
-        if (v > best) { best = v; winner = o.id; }
-      }
-      if (best <= 0) winner = null;
+      const { tally, chosenBy, winner } = resolveClash(c, submissions);
       return { id: c.id, day: c.day, options: c.options, tally, chosenBy, winner };
     });
     res.json({ totalDone: submissions.filter((s) => s.duelDone).length, clashes: out });
+  });
+
+  app.get("/api/plan", (_req, res) => {
+    const { submissions, clashes, counts, voters } = buildClashes();
+    const inClash = new Set();
+    clashes.forEach((c) => c.options.forEach((o) => inClash.add(o.id)));
+    const artistById = {};
+    schedule.ARTISTS.forEach((a) => { artistById[a.id] = a; });
+
+    const slotsByDay = {};
+    schedule.DAYS.forEach((d) => { slotsByDay[d.key] = []; });
+
+    // Clash slots (each a deck of the overlapping shows).
+    for (const c of clashes) {
+      const { tally, chosenBy, winner } = resolveClash(c, submissions);
+      slotsByDay[c.day].push({
+        type: "clash", id: c.id, day: c.day, rowStart: c.options[0].rowStart,
+        options: c.options, tally, chosenBy, winner,
+      });
+    }
+    // Single slots: every picked show that is NOT part of a clash.
+    for (const id of Object.keys(counts)) {
+      if (inClash.has(id)) continue;
+      const a = artistById[id];
+      if (!a) continue;
+      slotsByDay[a.day].push({
+        type: "single", day: a.day, rowStart: a.rowStart,
+        show: { id, name: a.name, stage: a.stage, timeLabel: a.timeLabel, rowStart: a.rowStart,
+                count: counts[id].total, voters: voters[id] || [] },
+      });
+    }
+    // Chronological order within each day.
+    Object.keys(slotsByDay).forEach((k) => slotsByDay[k].sort((x, y) => x.rowStart - y.rowStart));
+
+    res.json({
+      totalDone: submissions.filter((s) => s.duelDone).length,
+      days: schedule.DAYS.map((d) => ({ key: d.key, label: d.label })),
+      slotsByDay,
+    });
   });
 
   app.get("/plan", (_req, res) => {
