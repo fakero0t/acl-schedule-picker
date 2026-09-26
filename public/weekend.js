@@ -7,7 +7,7 @@
   const PLAN_DEFAULT_MIN = 60;  // assumed length of a plan with no end time
   const GAP_MIN_SHOWN = 15;     // free time shorter than this isn't drawn
   const GAP_PX_PER_MIN = 0.6;   // 1 hr of free time = 36px of space
-  const KIND_LABELS ={ event: "Event", hangout: "Pregame / Other" };
+  const KIND_LABELS = { event: "Event", hangout: "Pregame / Other" };
 
   let scheduleData = null;
   let events = [];
@@ -55,7 +55,7 @@
     const [hm, ap] = fmtMin(min).split(" ");
     return `<span class="tl-hm">${hm}</span><span class="tl-ap">${ap}</span>`;
   }
-  const sortKey =(min) => (min < LATE_NIGHT_MIN ? min + 1440 : min);
+  const sortKey = (min) => (min < LATE_NIGHT_MIN ? min + 1440 : min);
   // ACL grid rows are 15-min slots counted from noon (row 1 = 12:00 PM).
   const rowToMin = (row) => 12 * 60 + (row - 1) * scheduleData.slotMin;
 
@@ -103,7 +103,7 @@
     if (voters.definitely.length) who += `<div class="who"><span class="lab def">Definitely</span>${escapeHtml(voters.definitely.join(", "))}</div>`;
     if (voters.maybe.length) who += `<div class="who"><span class="lab maybe">Maybe</span>${escapeHtml(voters.maybe.join(", "))}</div>`;
     return `
-      <div class="card acl">
+      <div class="card acl" data-key="acl">
         <div class="card-kicker">ACL &middot; ${escapeHtml(stageName(artist.stage))}</div>
         <div class="card-name">${escapeHtml(artist.name)}</div>
         <div class="card-time">${timeRange(it)}</div>
@@ -114,7 +114,7 @@
   function planCard(it) {
     const { ev } = it;
     return `
-      <div class="card plan">
+      <div class="card plan" data-key="plan-${ev.id}">
         <button class="card-edit" type="button" data-id="${ev.id}">Edit</button>
         <div class="card-kicker">${KIND_LABELS[ev.kind] || KIND_LABELS.event}</div>
         <div class="card-name">${escapeHtml(ev.name)}</div>
@@ -124,9 +124,110 @@
       </div>`;
   }
 
+  // ---- map: pins for the day's plans (+ one for ACL at Zilker), click -> scroll to card ----
+  const AUSTIN = [30.2672, -97.7431];
+  const ACL_VENUE = { lat: 30.2673, lng: -97.7703 }; // Zilker Park Great Lawn
+  const GEO_KEY = "acl_geo_v1";
+  const GEO_GENERIC = new Set([ // too generic to prove a match ("Ary's house" != "Lewis House")
+    "the", "at", "of", "and", "a", "an", "on", "in", "st", "street", "ave", "avenue", "rd", "road",
+    "house", "home", "place", "apartment", "apt", "park", "bar", "restaurant", "cafe", "hotel",
+    "venue", "club", "austin", "tx", "texas",
+  ]);
+  let map = null, pinLayer = null, pinSig = "";
+  let flash = { keys: [], until: 0 };
+  let geo = {}; // location text -> {lat, lng} | null (not found)
+  const geoPending = new Set();
+  try { geo = JSON.parse(localStorage.getItem(GEO_KEY)) || {}; } catch (e) {}
+
+  const geoWords = (s) => s.toLowerCase().replace(/['’]/g, "").split(/[^a-z0-9]+/).filter(Boolean);
+
+  // Free lookup via Photon (OpenStreetMap), biased to Austin. Only trust a result that
+  // shares a distinctive word with what was typed, or when it's a street address.
+  async function lookup(loc) {
+    if (geoPending.has(loc)) return;
+    geoPending.add(loc);
+    try {
+      const q = new URLSearchParams({ q: loc, limit: "1", lat: AUSTIN[0], lon: AUSTIN[1], bbox: "-98.0,30.1,-97.5,30.55" });
+      const data = await fetch("https://photon.komoot.io/api/?" + q).then((r) => r.json());
+      const f = data.features && data.features[0];
+      let hit = null;
+      if (f) {
+        const p = f.properties || {};
+        const got = new Set(geoWords([p.name, p.street].filter(Boolean).join(" ")));
+        if (/^\d/.test(loc) || geoWords(loc).some((w) => !GEO_GENERIC.has(w) && got.has(w))) {
+          hit = { lat: f.geometry.coordinates[1], lng: f.geometry.coordinates[0] };
+        }
+      }
+      geo[loc] = hit;
+      try { localStorage.setItem(GEO_KEY, JSON.stringify(geo)); } catch (e) {}
+      render();
+    } catch (e) { /* offline / rate limited: try again next render */ }
+    finally { geoPending.delete(loc); }
+  }
+
+  function initMap() {
+    // On touch devices one finger scrolls the page (not the map); pinch still zooms/moves it.
+    map = L.map("map", { scrollWheelZoom: false, dragging: !L.Browser.mobile }).setView(AUSTIN, 12);
+    L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      maxZoom: 19,
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+    }).addTo(map);
+    pinLayer = L.layerGroup().addTo(map);
+  }
+
+  function focusCards(keys) {
+    flash = { keys, until: Date.now() + 1800 };
+    applyFlash();
+    const first = els.timeline.querySelector(keys.map((k) => `[data-key="${k}"]`).join(","));
+    if (first) first.scrollIntoView({ behavior: "smooth", block: "center" });
+    setTimeout(applyFlash, 1850);
+  }
+  function applyFlash() {
+    const on = Date.now() < flash.until;
+    els.timeline.querySelectorAll(".card").forEach((c) => c.classList.toggle("flash", on && flash.keys.includes(c.dataset.key)));
+  }
+
+  function renderMap(items) {
+    if (!map) return;
+    const groups = new Map(); // "lat,lng" -> { lat, lng, kind, keys, names }
+    const add = (c, kind, key, name) => {
+      const id = `${c.lat.toFixed(5)},${c.lng.toFixed(5)}`;
+      const g = groups.get(id) || groups.set(id, { ...c, kind, keys: [], names: [] }).get(id);
+      if (!g.keys.includes(key)) g.keys.push(key);
+      g.names.push(name);
+    };
+    const acl = items.filter((it) => it.kind === "acl");
+    if (acl.length) add(ACL_VENUE, "acl", "acl", `ACL Fest · ${acl.length} ${acl.length === 1 ? "set" : "sets"}`);
+    for (const it of items) {
+      if (it.kind !== "plan" || !it.ev.location) continue;
+      const loc = it.ev.location;
+      if (!(loc in geo)) { lookup(loc); continue; }
+      if (geo[loc]) add(geo[loc], it.ev.kind || "event", `plan-${it.ev.id}`, it.ev.name);
+    }
+
+    pinLayer.clearLayers();
+    for (const g of groups.values()) {
+      const icon = L.divIcon({ className: `pin pin-${g.kind}`, iconSize: [22, 22] });
+      L.marker([g.lat, g.lng], { icon })
+        .bindTooltip(g.names.map(escapeHtml).join("<br>"), { className: "pin-tip", direction: "top", offset: [0, -12] })
+        .on("click", () => focusCards(g.keys))
+        .addTo(pinLayer);
+    }
+
+    // Re-frame only when the set of pins changes, so polling doesn't undo the user's panning.
+    const sig = activeDay + "|" + [...groups.keys()].sort().join(";");
+    if (sig === pinSig) return;
+    pinSig = sig;
+    const pts = [...groups.values()].map((g) => [g.lat, g.lng]);
+    if (!pts.length) map.setView(AUSTIN, 12);
+    else if (pts.length === 1) map.setView(pts[0], 14);
+    else map.fitBounds(pts, { padding: [40, 40], maxZoom: 15 });
+  }
+
   function render() {
     if (!scheduleData) return;
     const items = itemsFor(activeDay);
+    renderMap(items);
     if (!items.length) {
       els.timeline.innerHTML = `<div class="tl-empty">Nothing on the books yet. Tap <b>+</b> to add a plan.</div>`;
       return;
@@ -151,6 +252,7 @@
           ${it.kind === "acl" ? aclCard(it) : planCard(it)}
         </li>`)
       .join("")}</ol>`;
+    applyFlash(); // keep a pin-click highlight alive across poll re-renders
   }
 
   async function refresh() {
@@ -256,6 +358,7 @@
   }
 
   async function init() {
+    if (window.L) initMap(); // timeline still works if the map library fails to load
     scheduleData = await fetch("/api/schedule").then((r) => r.json());
     activeDay = scheduleData.days[0].key;
     ACLGrid.buildDayTabs(els.days, scheduleData.days, (key) => { activeDay = key; render(); });

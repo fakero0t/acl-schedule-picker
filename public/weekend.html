@@ -7,6 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" integrity="sha512-Zcn6bjR/8RZbLEpLIeOwNtzREBAJnUKESxces60Mpoj+2okopSAcSUIUOseddDm0cxnGQzxIR7vJgsLZbdLE3w==" crossorigin="anonymous" />
   <link rel="stylesheet" href="/styles.css" />
 </head>
 <body>
@@ -18,7 +19,7 @@
       <div class="dates">October 02–04 &middot; 2026</div>
     </header>
 
-    <div class="toolbar">
+    <div class="toolbar centered">
       <div class="days" id="days"></div>
     </div>
 
@@ -29,7 +30,10 @@
       <span><span class="sw hangout"></span>Pregame / Other</span>
     </div>
 
-    <div id="timeline"></div>
+    <div class="weekend-layout">
+      <div id="timeline"></div>
+      <aside class="map-wrap"><div id="map"></div></aside>
+    </div>
   </div>
 
   <button class="fab" id="addBtn" type="button" aria-label="Add a plan"><svg viewBox="0 0 24 24" width="28" height="28" aria-hidden="true"><path d="M12 4v16M4 12h16" stroke="currentColor" stroke-width="4" stroke-linecap="round"/></svg></button>
@@ -72,6 +76,7 @@
 
   <div class="toast" id="toast"></div>
 
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js" integrity="sha512-BwHfrr4c9kmRkLw6iXFdzcdWV/PGkVgiIyIWLLlTSXzWQzxuSg4DiQUCpauz/EWjgk5TYQqX/kvn9pG1NpYfqg==" crossorigin="anonymous"></script>
   <script src="/grid.js"></script>
   <script src="/weekend.js"></script>
 </body>
