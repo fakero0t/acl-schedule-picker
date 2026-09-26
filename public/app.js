@@ -208,12 +208,16 @@
     const tierLine = (lab, names) =>
       `<div class="vc-tier"><span class="vt-lab ${lab.toLowerCase()}">${lab}</span> ${names.length ? esc(names.join(", ")) : "—"}</div>`;
 
-    // matchup cards with a VS badge between each
+    // matchup cards, tilted and spilling, with a lightning bolt between each
+    const BOLT = '<svg class="bolt" viewBox="0 0 40 100" aria-hidden="true"><path d="M25 2 4 58 18 58 12 98 38 40 22 40Z"/></svg>';
+    const n = opts.length;
     let cards = "";
     opts.forEach((o, i) => {
-      if (i > 0) cards += `<div class="vs-badge">VS</div>`;
+      if (i > 0) cards += `<div class="vs-bolt">${BOLT}</div>`;
       const side = i % 2 === 0 ? "from-left" : "from-right";
-      cards += `<div class="vs-card ${cc(i)} ${side}${chosen === o.id ? " sel" : ""}" data-choice="${o.id}" style="animation-delay:${i * 90}ms">
+      const tilt = n === 1 ? 0 : i === 0 ? -8 : i === n - 1 ? 8 : 0;
+      const edge = n > 1 ? (i === 0 ? " edge-l" : i === n - 1 ? " edge-r" : "") : "";
+      cards += `<div class="vs-card ${cc(i)} ${side}${edge}${chosen === o.id ? " sel" : ""}" data-choice="${o.id}" style="--tilt:${tilt}deg;animation-delay:${i * 80}ms">
           <div class="vc-name">${esc(o.name)}</div>
           <div class="vc-meta">${esc(o.timeLabel)} · ${esc(o.stage)}</div>
           ${tierLine("DEFINITELY", o.definitely || [])}
