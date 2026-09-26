@@ -32,7 +32,7 @@ A shared planner for your friend group at **Austin City Limits 2026, Weekend One
 - Free time between things is shown, so you can see gaps in the day
 - A map of Austin pins every plan; tap a pin to jump to it
 
-<img src="docs/screenshots/desktop-map.png" alt="Map pins next to the day's timeline" />
+<img src="docs/screenshots/desktop-map.png" width="480" alt="Map of Austin with a pin for each plan and the ACL sets" />
 
 ## On your phone
 
