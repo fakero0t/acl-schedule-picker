@@ -245,8 +245,26 @@ body {
 
 /* ---- Festival map (tilted 3D "drone" view) ---- */
 .map-frame {
+  position: relative;
   display: block; background: var(--box); border: 3px solid var(--ink); border-radius: 14px;
   padding: 6px; box-shadow: 0 4px 0 var(--shadow);
+}
+/* Interactive / Festival map toggle, floating over the top-left of the map */
+.map-view.pinning ~ .map-mode { display: none; }
+.map-mode { position: absolute; left: 14px; top: 14px; z-index: 6; background: var(--box); border: 2.5px solid var(--ink); padding: 3px; gap: 2px; }
+.map-mode .day-tab { font-size: 12px; padding: 6px 11px; }
+/* the official ACL map, same box as the live map; scroll to pan */
+.official-map {
+  position: absolute; inset: 6px; z-index: 4; overflow: auto; border-radius: 9px;
+  background: #3d4a2e; -webkit-overflow-scrolling: touch;
+}
+.official-map[hidden] { display: none; }
+.official-map img { display: block; height: 100%; width: auto; max-width: none; }
+.official-full[hidden] { display: none; }
+.official-full {
+  position: absolute; top: 14px; right: 14px; z-index: 6;
+  background: var(--ink); color: var(--box); text-decoration: none; padding: 5px 10px; border-radius: 999px;
+  font-family: "Anton", sans-serif; text-transform: uppercase; letter-spacing: .04em; font-size: 12px;
 }
 .map-view {
   position: relative; overflow: hidden; border-radius: 9px; aspect-ratio: 16 / 10;
@@ -484,6 +502,16 @@ body {
 /* same-start items sit side by side in one row */
 .tl-cards { display: flex; flex-wrap: wrap; gap: 10px; min-width: 0; }
 .tl-cards > .card { flex: 1 1 calc(50% - 10px); min-width: 0; } /* at most two per line */
+/* overlapping items: lanes side by side; each slot is offset and sized by time (inline) */
+.tl-item.overlap { position: relative; }
+.tl-lanes { display: grid; grid-template-columns: repeat(var(--lanes), minmax(0, 1fr)); gap: 10px; min-width: 0; }
+.lane { display: flex; flex-direction: column; min-width: 0; }
+.lane-slot { display: flex; }
+.lane-slot > .card { flex: 1; }
+.tl-mark { position: absolute; left: 0; display: grid; grid-template-columns: 86px 26px; pointer-events: none; }
+.tl-mark.acl .tl-dot { background: var(--pink); border-color: var(--pink); }
+.tl-mark.plan .tl-dot { background: var(--pink); }
+.tl-mark.hangout .tl-dot { background: var(--sky); }
 
 .card {
   position: relative; text-align: left; width: 100%;
@@ -570,6 +598,11 @@ body {
   .tl-cards.multi > .card { padding: 9px 10px; }
   .tl-cards.multi .card-edit { position: static; float: right; margin: -3px -4px 4px 6px; padding: 4px 8px; }
   .tl-cards.multi .card.plan .card-name { padding-right: 0; clear: right; }
+  .tl-mark { grid-template-columns: 70px 22px; }
+  .tl-lanes { gap: 8px; }
+  .tl-lanes.multi .card { padding: 9px 10px; }
+  .tl-lanes.multi .card-edit { position: static; float: right; margin: -3px -4px 4px 6px; padding: 4px 8px; }
+  .tl-lanes.multi .card.plan .card-name { padding-right: 0; clear: right; }
 }
 
 @media (max-width: 560px) {

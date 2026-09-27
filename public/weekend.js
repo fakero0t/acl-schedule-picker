@@ -7,6 +7,7 @@
   const PLAN_DEFAULT_MIN = 60;  // assumed length of a plan with no end time
   const GAP_MIN_SHOWN = 15;     // free time shorter than this isn't drawn
   const GAP_PX_PER_MIN = 0.6;   // 1 hr of free time = 36px of space
+  const LANE_PX_PER_MIN = 3;    // overlapping items: 1 hr = 180px (15 min clears a time label)
   const KIND_LABELS = { event: "Event", hangout: "Pregame / Other" };
 
   let scheduleData = null;
@@ -244,22 +245,56 @@
       const label = [h && `${h} hr`, m && `${m} min`].filter(Boolean).join(" ");
       return `<li class="tl-gap" style="height:${Math.round(gap * GAP_PX_PER_MIN)}px"><span>${label} free</span></li>`;
     };
-    // Items that start at the same time share one row (one timestamp), side by side as options.
+    // Items that overlap in time share one row. Same start: side by side as options.
+    // Staggered starts: side-by-side lanes where each card starts at its own time and
+    // runs as long as it lasts, so a set that bleeds into the next one is visible.
     const rows = [];
+    let rowEnd = null;
     for (const it of items) {
+      const s = sortKey(it.start);
       const last = rows[rows.length - 1];
-      if (last && last[0].start === it.start) last.push(it);
-      else rows.push([it]);
+      if (last && s < rowEnd) last.push(it);
+      else { rows.push([it]); rowEnd = s; }
+      rowEnd = Math.max(rowEnd, s + it.span);
     }
+    const card = (it) => (it.kind === "acl" ? aclCard(it) : planCard(it));
+    const itemClass = (it) => `${it.kind}${it.ev ? " " + (it.ev.kind || "event") : ""}`;
     els.timeline.innerHTML = `<ol class="tl">${rows
       .map((row) => {
         const first = row[0];
         const gap = row.map(gapBefore)[0];
+        if (row.every((it) => it.start === first.start)) {
+          return `${gap}
+          <li class="tl-item ${itemClass(first)}">
+            <div class="tl-time">${timeBlock(first.start)}</div>
+            <div class="tl-dot"></div>
+            <div class="tl-cards${row.length > 1 ? " multi" : ""}">${row.map(card).join("")}</div>
+          </li>`;
+        }
+        // lanes: each item goes in the first lane that's free by its start
+        const t0 = sortKey(first.start);
+        const lanes = [];
+        for (const it of row) {
+          const s = sortKey(it.start);
+          let lane = lanes.find((l) => l.end <= s);
+          if (!lane) lanes.push((lane = { end: t0, html: "" }));
+          const top = Math.round((s - lane.end) * LANE_PX_PER_MIN);
+          lane.html += `<div class="lane-slot" style="margin-top:${top}px;min-height:${Math.round(it.span * LANE_PX_PER_MIN)}px">${card(it)}</div>`;
+          lane.end = s + it.span;
+        }
+        // later start times get their own label + dot on the rail, level with their card
+        const starts = [...new Set(row.map((it) => it.start))];
+        const marks = starts.slice(1).map((st) => {
+          const top = Math.round((sortKey(st) - t0) * LANE_PX_PER_MIN);
+          const it = row.find((x) => x.start === st);
+          return `<div class="tl-mark ${itemClass(it)}" style="top:${top}px"><div class="tl-time">${timeBlock(st)}</div><div class="tl-dot"></div></div>`;
+        }).join("");
         return `${gap}
-        <li class="tl-item ${first.kind}${first.ev ? " " + (first.ev.kind || "event") : ""}">
+        <li class="tl-item overlap ${itemClass(first)}">
           <div class="tl-time">${timeBlock(first.start)}</div>
           <div class="tl-dot"></div>
-          <div class="tl-cards${row.length > 1 ? " multi" : ""}">${row.map((it) => (it.kind === "acl" ? aclCard(it) : planCard(it))).join("")}</div>
+          <div class="tl-lanes${lanes.length > 1 ? " multi" : ""}" style="--lanes:${lanes.length}">${lanes.map((l) => `<div class="lane">${l.html}</div>`).join("")}</div>
+          ${marks}
         </li>`;
       })
       .join("")}</ol>`;

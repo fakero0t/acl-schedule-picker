@@ -30,6 +30,9 @@
     compassBtn: document.getElementById("compassBtn"),
     status: document.getElementById("status"),
     view: document.getElementById("mapView"),
+    officialMap: document.getElementById("officialMap"),
+    mapMode: document.getElementById("mapMode"),
+    officialFull: document.getElementById("officialFull"),
     aerial: document.getElementById("aerial"),
     stage: document.getElementById("mapStage"),
     places: document.getElementById("places"),
@@ -414,6 +417,7 @@
   // ---- pin drop / meeting point ----
   // The view stays exactly as it is while placing; taps are projected onto the ground.
   function setPinMode(kind) {
+    if (kind) setMapMode("live"); // pins go on the live map
     pinKind = kind;
     const on = !!kind;
     els.view.classList.toggle("pinning", on);
@@ -422,6 +426,20 @@
     els.meetBtn.textContent = kind === "meet" ? "Cancel" : "Set meeting point";
     if (kind === "me") setStatus("Tap the map where you are.");
     if (kind === "meet") setStatus("Tap where everyone should meet.");
+  }
+
+  // ---- Interactive (live) map vs the official ACL festival map ----
+  function setMapMode(mode) {
+    const official = mode === "official";
+    const wasHidden = els.officialMap.hidden;
+    els.officialMap.hidden = !official;
+    els.officialFull.hidden = !official;
+    els.mapMode.querySelectorAll(".day-tab").forEach((b) => b.classList.toggle("active", b.dataset.mode === mode));
+    if (official && wasHidden) {
+      // open on the festival grounds (right side of the image), not the legend
+      const m = els.officialMap;
+      m.scrollLeft = m.scrollWidth - m.clientWidth;
+    }
   }
 
   function onMapTap(e) {
@@ -622,6 +640,12 @@
     els.pinBtn.addEventListener("click", () => withName(() => setPinMode(pinKind === "me" ? null : "me")));
     els.meetBtn.addEventListener("click", () => withName(() => setPinMode(pinKind === "meet" ? null : "meet")));
     els.view.addEventListener("click", onMapTap);
+    els.mapMode.addEventListener("click", (e) => {
+      const b = e.target.closest(".day-tab");
+      if (!b) return;
+      if (b.dataset.mode === "official" && pinKind) setPinMode(null);
+      setMapMode(b.dataset.mode);
+    });
     els.view.addEventListener("pointerdown", onPointerDown);
     els.view.addEventListener("pointermove", onPointerMove);
     els.view.addEventListener("pointerup", onPointerUp);
