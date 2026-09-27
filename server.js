@@ -56,7 +56,7 @@ function normalizePicks(picks) {
 function createApp(db) {
   const app = express();
   app.use(express.json({ limit: "64kb" }));
-  app.use(express.static(path.join(__dirname, "public")));
+  app.use(express.static(path.join(__dirname, "public"), { index: false }));
 
   // Static schedule + layout metadata for the client to render the grid.
   app.get("/api/schedule", (_req, res) => {
@@ -152,9 +152,15 @@ function createApp(db) {
     res.json({ ok: true });
   });
 
-  app.get("/weekend", (_req, res) => {
+  app.get("/", (_req, res) => {
     res.sendFile(path.join(__dirname, "public", "weekend.html"));
   });
+
+  app.get("/vote", (_req, res) => {
+    res.sendFile(path.join(__dirname, "public", "index.html"));
+  });
+
+  app.get("/weekend", (_req, res) => res.redirect(301, "/"));
 
   app.get("/results", (_req, res) => {
     res.sendFile(path.join(__dirname, "public", "results.html"));

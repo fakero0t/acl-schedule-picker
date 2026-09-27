@@ -10,7 +10,7 @@ A shared planner for your friend group at **Austin City Limits 2026, Weekend One
 
 ## What it does
 
-**Pick your sets**
+**Pick your sets** (open `/vote`)
 - The full ACL schedule for Friday, Saturday and Sunday, laid out by stage and time
 - Tap an artist, then mark it **Definitely** or **Maybe**
 - Enter your name once; hit **Submit** when you're done and **Edit** any time to change
@@ -22,7 +22,7 @@ A shared planner for your friend group at **Austin City Limits 2026, Weekend One
 - Tap a set to see exactly who's going (and who's a maybe)
 - Updates on its own as friends submit
 
-**The Weekend** (open `/weekend`)
+**The Weekend** (open `/`)
 - One timeline per day with the ACL sets your group picked and any plans people add (brunch, pregames, late shows)
 - Anyone can add, edit or delete a plan, with a time, place and notes
 - Sets or plans at the same time show side by side, so clashes are easy to spot
@@ -39,7 +39,7 @@ npm install
 npm run dev
 ```
 
-Open http://localhost:3000 (results at http://localhost:3000/results).
+Open http://localhost:3000 (picks at http://localhost:3000/vote, results at http://localhost:3000/results).
 
 ## Test
 

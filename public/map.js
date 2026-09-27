@@ -166,7 +166,6 @@
   const zoomHome = () => (els.view.clientWidth < 500 ? 1.9 : 1.4);
   // zoom = stage width / view width; rot = degrees clockwise from north-up; x/y = pan in % of the stage
   const cam = { tilt: TILT, rot: 0, zoom: 1.25, x: 0, y: 0 };
-  let savedRot = 0;
 
   function applyCam() {
     const s = els.stage.style;
@@ -413,23 +412,14 @@
   }
 
   // ---- pin drop / meeting point ----
-  // The map lies flat and north-up while placing so a tap maps straight to a ground spot.
+  // The view stays exactly as it is while placing; taps are projected onto the ground.
   function setPinMode(kind) {
-    const wasOn = !!pinKind;
     pinKind = kind;
     const on = !!kind;
     els.view.classList.toggle("pinning", on);
     els.view.dataset.hint = kind === "meet" ? "Tap the meeting spot" : "Tap where you are";
     els.pinBtn.textContent = kind === "me" ? "Cancel pin" : "Drop pin";
     els.meetBtn.textContent = kind === "meet" ? "Cancel" : "Set meeting point";
-    if (on && !wasOn) {
-      savedRot = cam.rot;
-      cam.rot = Math.round(cam.rot / 360) * 360;
-    } else if (!on && wasOn) {
-      cam.rot = savedRot;
-    }
-    cam.tilt = on ? 0 : TILT;
-    applyCam();
     if (kind === "me") setStatus("Tap the map where you are.");
     if (kind === "meet") setStatus("Tap where everyone should meet.");
   }
@@ -437,9 +427,9 @@
   function onMapTap(e) {
     if (Date.now() - lastDragEnd < 250) return;
     if (!pinKind) return;
-    const r = els.stage.getBoundingClientRect();
-    const x = Math.round(((e.clientX - r.left) / r.width) * G.MAP_W);
-    const y = Math.round(((e.clientY - r.top) / r.height) * G.MAP_H);
+    const pt = groundUnder(e.clientX, e.clientY);
+    const x = Math.round((pt.x / 100) * G.MAP_W);
+    const y = Math.round((pt.y / 100) * G.MAP_H);
     const body = { x, y };
     if (pinKind === "meet") {
       setPinMode(null);
