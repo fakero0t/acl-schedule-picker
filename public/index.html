@@ -11,22 +11,22 @@
 </head>
 <body>
   <div class="wrap">
+    <nav class="site-nav" aria-label="Pages">
+      <a href="/">Itinerary</a>
+      <a href="/map">Map</a>
+      <a href="/results">Votes</a>
+    </nav>
     <header class="mast">
       <div class="kicker">ACL Schedule Planner</div>
       <h1>Austin City Limits 2026</h1>
       <div class="sub">Pick Your Favorites</div>
     </header>
 
-    <div class="toolbar">
+    <div class="toolbar centered">
       <div class="days" id="days"></div>
-      <div class="actions">
-        <a class="btn ghost" href="/results">Results →</a>
-        <button class="btn" id="editBtn" hidden>Edit</button>
-        <button class="btn primary" id="submitBtn">Submit</button>
-      </div>
     </div>
 
-    <div class="hint" id="hint">Tap the artists you want to see. Hit <b>Submit</b> when you're set.</div>
+    <div class="hint" id="hint">Tap an artist, then pick <b>Definitely</b> or <b>Maybe</b>.</div>
 
     <div id="grid"></div>
   </div>

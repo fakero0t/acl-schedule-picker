@@ -68,6 +68,49 @@ function createDb(dbPath) {
     });
   }
 
+  // Live friend locations: one row per person, either GPS (lat/lon) or a
+  // manual pin (x/y in map pixels). Rows expire, so nothing lingers.
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS locations (
+      name       TEXT PRIMARY KEY COLLATE NOCASE,
+      lat        REAL,
+      lon        REAL,
+      accuracy   REAL,
+      x          REAL,
+      y          REAL,
+      updated_at INTEGER NOT NULL
+    );
+  `);
+  const upsertLocStmt = db.prepare(`
+    INSERT INTO locations (name, lat, lon, accuracy, x, y, updated_at)
+    VALUES (@name, @lat, @lon, @accuracy, @x, @y, @updated_at)
+    ON CONFLICT(name) DO UPDATE SET
+      lat = excluded.lat, lon = excluded.lon, accuracy = excluded.accuracy,
+      x = excluded.x, y = excluded.y, updated_at = excluded.updated_at
+  `);
+  const purgeLocStmt = db.prepare(`DELETE FROM locations WHERE updated_at < ?`);
+  const allLocStmt = db.prepare(`SELECT * FROM locations ORDER BY name COLLATE NOCASE`);
+  const deleteLocStmt = db.prepare(`DELETE FROM locations WHERE name = ?`);
+
+  // The group's single shared meeting point (map pixels), or no row.
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS meetup (
+      id         INTEGER PRIMARY KEY CHECK (id = 1),
+      x          REAL NOT NULL,
+      y          REAL NOT NULL,
+      set_by     TEXT NOT NULL,
+      updated_at INTEGER NOT NULL
+    );
+  `);
+  const setMeetStmt = db.prepare(`
+    INSERT INTO meetup (id, x, y, set_by, updated_at) VALUES (1, @x, @y, @set_by, @updated_at)
+    ON CONFLICT(id) DO UPDATE SET x = excluded.x, y = excluded.y,
+      set_by = excluded.set_by, updated_at = excluded.updated_at
+  `);
+  const purgeMeetStmt = db.prepare(`DELETE FROM meetup WHERE updated_at < ?`);
+  const getMeetStmt = db.prepare(`SELECT x, y, set_by, updated_at FROM meetup WHERE id = 1`);
+  const clearMeetStmt = db.prepare(`DELETE FROM meetup`);
+
   return {
     raw: db,
     // Insert or overwrite one person's picks. name is stored trimmed.
@@ -100,6 +143,29 @@ function createDb(dbPath) {
     },
     deleteEvent(id) {
       return deleteEventStmt.run(id).changes > 0;
+    },
+    // loc: { lat, lon, accuracy, x, y } (unused fields null)
+    setLocation(name, loc) {
+      upsertLocStmt.run({ name: name.trim(), ...loc, updated_at: Date.now() });
+    },
+    // Drops rows older than maxAgeMs, then returns the rest.
+    locations(maxAgeMs) {
+      purgeLocStmt.run(Date.now() - maxAgeMs);
+      return allLocStmt.all();
+    },
+    clearLocation(name) {
+      deleteLocStmt.run(name.trim());
+    },
+    setMeetup(name, x, y) {
+      setMeetStmt.run({ x, y, set_by: name.trim(), updated_at: Date.now() });
+    },
+    // Drops it once older than maxAgeMs; -> { x, y, set_by, updated_at } | null
+    meetup(maxAgeMs) {
+      purgeMeetStmt.run(Date.now() - maxAgeMs);
+      return getMeetStmt.get() || null;
+    },
+    clearMeetup() {
+      clearMeetStmt.run();
     },
   };
 }

@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ACL Schedule Planner</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <div class="wrap">
+    <nav class="site-nav" aria-label="Pages">
+      <a href="/">Itinerary</a>
+      <a href="/map" aria-current="page">Map</a>
+      <a href="/results">Votes</a>
+    </nav>
+    <header class="mast">
+      <div class="kicker">ACL Schedule Planner</div>
+      <h1>Festival Map</h1>
+      <div class="sub">Zilker Park</div>
+    </header>
+    <div class="hint">Location only shares while the app is open.</div>
+
+    <div class="loc-bar">
+      <button class="btn" id="pinBtn">Drop pin</button>
+      <button class="btn" id="meetBtn">Set meeting point</button>
+      <button class="btn" id="beaconBtn">Find me</button>
+    </div>
+    <div class="hint" id="status">Finding you…</div>
+
+    <div class="map-frame">
+      <div class="map-view" id="mapView">
+        <div class="map-stage" id="mapStage">
+          <img class="map-backdrop" src="/festival-backdrop.jpg" alt="" draggable="false" />
+          <img id="aerial" src="/festival-aerial.jpg" alt="Aerial photo of Zilker Park with the ACL festival grounds, Lady Bird Lake and Barton Creek" draggable="false" />
+          <img class="map-overlay" src="/festival-overlay.svg" alt="" draggable="false" />
+          <div class="map-places" id="places"></div>
+          <div class="map-dots" id="dots"></div>
+        </div>
+        <div class="map-haze"></div>
+        <div class="map-controls" id="mapControls">
+          <button class="map-ctl" id="zoomInBtn" aria-label="Zoom in">+</button>
+          <button class="map-ctl" id="zoomOutBtn" aria-label="Zoom out">−</button>
+          <button class="map-ctl" id="rotLeftBtn" aria-label="Rotate left">↺</button>
+          <button class="map-ctl" id="rotRightBtn" aria-label="Rotate right">↻</button>
+          <button class="map-ctl compass" id="compassBtn" aria-label="Reset to north"><span class="needle">N</span></button>
+        </div>
+        <div class="map-credit">Imagery © Esri, Maxar, Earthstar Geographics · Roads © OpenStreetMap</div>
+      </div>
+      <div class="official-map" id="officialMap" hidden>
+        <img src="/festival-map-official.jpg" alt="Official ACL Fest 2026 festival map" draggable="false" />
+      </div>
+      <a class="official-full" id="officialFull" href="/festival-map-official.jpg" target="_blank" rel="noopener" hidden>Full size ↗</a>
+      <div class="days map-mode" id="mapMode">
+        <button class="day-tab active" type="button" data-mode="live">Interactive</button>
+        <button class="day-tab" type="button" data-mode="official">Festival map</button>
+      </div>
+    </div>
+    <div class="hint map-help">Drag to move · pinch to zoom · twist (or Shift-drag) to rotate · tap N to face north</div>
+
+    <div class="meet-card" id="meetCard" hidden></div>
+    <div class="friends" id="friends"></div>
+  </div>
+
+  <!-- name modal -->
+  <div class="modal-bg" id="modalBg">
+    <div class="modal">
+      <h2>Who's this?</h2>
+      <p>Your name so your friends know which dot is you.</p>
+      <input id="nameInput" placeholder="e.g. Ary" maxlength="40" autocomplete="off" />
+      <button class="btn primary" id="nameGo" style="width:100%">Let's go</button>
+    </div>
+  </div>
+
+  <!-- find-me beacon -->
+  <div class="beacon" id="beacon">
+    <div class="beacon-name" id="beaconName"></div>
+    <div class="beacon-hint">Hold your phone up high · tap to stop</div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script src="/geo.js"></script>
+  <script src="/map.js"></script>
+</body>
+</html>

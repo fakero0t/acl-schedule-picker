@@ -4,7 +4,7 @@ A shared planner for your friend group at **Austin City Limits 2026, Weekend One
 
 ## What it does
 
-**Pick your sets**
+**Pick your sets** (open `/vote`)
 
 <img src="docs/screenshots/desktop-picker.png" alt="Picking artists" />
 
@@ -22,7 +22,7 @@ A shared planner for your friend group at **Austin City Limits 2026, Weekend One
 - Tap a set to see exactly who's going (and who's a maybe)
 - Updates on its own as friends submit
 
-**The Weekend** (open `/weekend`)
+**The Weekend** (open `/`)
 
 <img src="docs/screenshots/desktop-weekend.png" alt="The Weekend view" />
 

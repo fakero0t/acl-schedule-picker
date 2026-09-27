@@ -1,17 +1,15 @@
-// Picker page: choose artists at two tiers (Definitely / Maybe), submit, edit.
+// Picker page: choose artists at two tiers (Definitely / Maybe). Voting is closed, so there is no submit.
 (function () {
   const NAME_KEY = "acl_name";
   const DRAFT_PREFIX = "acl_draft_v1_";
   let name = null;
   let selected = new Map(); // id -> "definitely" | "maybe"
-  let locked = false;       // true after a successful submit (read-only until Edit)
+  let locked = false;       // true when this name already submitted (read-only)
   let gridApi = null;
 
   const els = {
     days: document.getElementById("days"),
     grid: document.getElementById("grid"),
-    submitBtn: document.getElementById("submitBtn"),
-    editBtn: document.getElementById("editBtn"),
     hint: document.getElementById("hint"),
     toast: document.getElementById("toast"),
     modalBg: document.getElementById("modalBg"),
@@ -45,7 +43,6 @@
       return raw ? JSON.parse(raw) : null;
     } catch (e) { return null; }
   }
-  function clearDraft() { try { localStorage.removeItem(draftKey()); } catch (e) {} }
 
   function counts() {
     let def = 0, maybe = 0;
@@ -55,12 +52,10 @@
 
   function applyLockUI() {
     els.grid.querySelectorAll(".grid").forEach((g) => g.classList.toggle("locked", locked));
-    els.submitBtn.hidden = locked;
-    els.editBtn.hidden = !locked;
     const c = counts();
     els.hint.innerHTML = locked
-      ? `Submitted <b>${c.def}</b> definitely &middot; <b>${c.maybe}</b> maybe. Hit <b>Edit</b> to change.`
-      : `Tap an artist, then pick <b>Definitely</b> or <b>Maybe</b>. Hit <b>Submit</b> when set.`;
+      ? `Submitted <b>${c.def}</b> definitely &middot; <b>${c.maybe}</b> maybe.`
+      : `Tap an artist, then pick <b>Definitely</b> or <b>Maybe</b>.`;
   }
 
   // Reflect the current tier state onto one box.
@@ -129,31 +124,6 @@
     els.grid.querySelectorAll(".box").forEach(updateBox);
   }
 
-  async function submit() {
-    if (!name) { openModal(); return; }
-    els.submitBtn.disabled = true;
-    try {
-      const picks = [...selected.entries()].map(([id, tier]) => ({ id, tier }));
-      const res = await fetch("/api/submit", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ name, picks }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "submit failed");
-      locked = true;
-      clearDraft(); // now saved server-side
-      applyLockUI();
-      toast("Submitted! 🎉");
-    } catch (e) {
-      toast("Error: " + e.message);
-    } finally {
-      els.submitBtn.disabled = false;
-    }
-  }
-
-  function edit() { locked = false; applyLockUI(); toast("Edit mode"); }
-
   function openModal() { els.modalBg.classList.add("show"); els.nameInput.focus(); }
   function closeModal() { els.modalBg.classList.remove("show"); }
 
@@ -185,8 +155,6 @@
     ACLGrid.buildDayTabs(els.days, data.days, (dayKey) => gridApi.show(dayKey));
     gridApi = ACLGrid.render(els.grid, data, decorateBox);
 
-    els.submitBtn.addEventListener("click", submit);
-    els.editBtn.addEventListener("click", edit);
     els.nameGo.addEventListener("click", () => setName(els.nameInput.value));
     els.nameInput.addEventListener("keydown", (e) => { if (e.key === "Enter") setName(els.nameInput.value); });
 
