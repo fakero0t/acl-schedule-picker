@@ -201,7 +201,8 @@
     const endOf = (t) => { const p = String(t).split("–"); return (p[1] || p[0]).trim(); };
     const latest = opts.reduce((m, o) => (o.rowEnd > m.rowEnd ? o : m), opts[0]);
     els.duelQ.innerHTML =
-      `<span class="dq-bolt">⚡</span> CONFLICT · ${esc(startOf(opts[0].timeLabel))}–${esc(endOf(latest.timeLabel))}`;
+      `Vote on which artist` +
+      `<span class="duel-time"><span class="dq-bolt">⚡</span> ${esc(startOf(opts[0].timeLabel))}–${esc(endOf(latest.timeLabel))}</span>`;
 
     const chosen = duel.answers[clash.id];
     const cc = (i) => "c" + (i % 4);

@@ -385,13 +385,14 @@ body {
 
 /* ---- duel matchup modal (VS smackdown) ---- */
 .duel-modal { max-width: 680px; width: 94vw; overflow: visible; position: relative; }
-.duel-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px; }
+.duel-head { position: relative; text-align: center; margin-bottom: 4px; }
 .duel-kicker { font-family: "Anton", sans-serif; letter-spacing: .05em; text-transform: uppercase; }
-.duel-progress { font-weight: 800; opacity: .7; }
+.duel-progress { position: absolute; right: 0; top: 0; font-weight: 800; opacity: .7; }
 .duel-q {
   font-family: "Anton", sans-serif; font-size: 1.7rem; letter-spacing: .02em; margin: 2px 0 22px;
-  text-transform: uppercase; text-shadow: 2px 2px 0 rgba(255,46,154,.18);
+  text-transform: uppercase; text-align: center; text-shadow: 2px 2px 0 rgba(255,46,154,.18);
 }
+.duel-time { display: block; font-size: 1.15rem; margin-top: 2px; opacity: .9; }
 .dq-bolt { color: #ffcf1a; -webkit-text-stroke: 1px var(--ink); animation: boltBuzz 1.4s ease-in-out infinite; display: inline-block; }
 
 /* per-option colors: card tint (--oct) + solid (--oc) */
