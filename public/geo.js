@@ -14,31 +14,29 @@
   const SOUTH = 30.263304;
   const EAST = -97.760915;
 
-  // Stages, areas and gates. Positions are estimated from the official ACL 2026
-  // map (not surveyed on-site), so treat them as roughly ±30 m.
+  // Stages, areas and gates, placed from the official ACL 2026 festival map: stages sit on
+  // the stage structures in the aerial photo (the sites don't move year to year), and
+  // everything else is carried over from the official map by warping it onto those
+  // stages. Not surveyed on-site, so treat as roughly ±20 m.
   const PLACES = [
-    { name: "Miller Lite", kind: "stage", lat: 30.268958, lon: -97.768774 },
-    { name: "T-Mobile", kind: "stage", lat: 30.267999, lon: -97.770249 }, // west stage, per aerial photo
-    { name: "Tito's", kind: "stage", lat: 30.268504, lon: -97.765208 },
-    { name: "American Express", kind: "stage", lat: 30.26721, lon: -97.763066 },
-    { name: "BMI", kind: "stage", lat: 30.26661, lon: -97.769184 },
-    { name: "Snapchat", kind: "stage", lat: 30.266657, lon: -97.767084 },
-    { name: "Beatbox", kind: "stage", lat: 30.264963, lon: -97.76934 },
-    { name: "Austin Kiddie Limits", kind: "stage", lat: 30.265844, lon: -97.765757 },
-    { name: "Bonus Tracks", kind: "area", lat: 30.265768, lon: -97.766989 },
-    { name: "The Big Tent", kind: "area", lat: 30.268819, lon: -97.767938 },
-    { name: "Rock Island", kind: "area", lat: 30.268295, lon: -97.768565 },
-    { name: "The Big Shade", kind: "area", lat: 30.267007, lon: -97.768354 },
-    { name: "ACL Market", kind: "area", lat: 30.268096, lon: -97.766917 },
-    { name: "Y'all Mart", kind: "area", lat: 30.267711, lon: -97.768156 },
-    { name: "Merch Palace", kind: "area", lat: 30.265252, lon: -97.767167 },
-    { name: "Cabanas", kind: "area", lat: 30.267889, lon: -97.764591 },
-    { name: "Platinum Lounge", kind: "area", lat: 30.267905, lon: -97.763046 },
-    { name: "Bungalows", kind: "area", lat: 30.26702, lon: -97.769573 },
-    { name: "Lady Bird Entrance", kind: "gate", lat: 30.268722, lon: -97.77031 },
-    { name: "Barton Springs West Entrance", kind: "gate", lat: 30.266367, lon: -97.770098 },
-    { name: "Barton Springs East Entrance", kind: "gate", lat: 30.264752, lon: -97.76569 },
-    { name: "VIP / Platinum Entrance", kind: "gate", lat: 30.265273, lon: -97.765083 },
+    { name: "Miller Lite", kind: "stage", lat: 30.269023, lon: -97.769345 },
+    { name: "T-Mobile", kind: "stage", lat: 30.267999, lon: -97.770249 },
+    { name: "Tito's", kind: "stage", lat: 30.267783, lon: -97.765058 },
+    { name: "American Express", kind: "stage", lat: 30.267233, lon: -97.763249 },
+    { name: "BMI", kind: "stage", lat: 30.266759, lon: -97.769594 },
+    { name: "Snapchat", kind: "stage", lat: 30.266732, lon: -97.766537 },
+    { name: "Beatbox", kind: "stage", lat: 30.265401, lon: -97.768633 },
+    { name: "Rock Island", kind: "area", lat: 30.268296, lon: -97.76906 },
+    { name: "The Big Shade", kind: "area", lat: 30.267066, lon: -97.76862 },
+    { name: "ACL Market", kind: "area", lat: 30.267479, lon: -97.766331 },
+    { name: "Y'all Mart", kind: "area", lat: 30.267828, lon: -97.768567 },
+    { name: "Cabanas", kind: "area", lat: 30.267529, lon: -97.764223 },
+    { name: "Platinum Lounge", kind: "area", lat: 30.267606, lon: -97.763417 },
+    { name: "Bungalows", kind: "area", lat: 30.267032, lon: -97.770094 },
+    { name: "Lady Bird Entrance", kind: "gate", lat: 30.268861, lon: -97.770405 },
+    { name: "Barton Springs West Entrance", kind: "gate", lat: 30.266429, lon: -97.769586 },
+    { name: "Barton Springs East Entrance", kind: "gate", lat: 30.265407, lon: -97.765621 },
+    { name: "VIP / Platinum Entrance", kind: "gate", lat: 30.26554, lon: -97.765277 },
   ];
 
   const M_PER_PX = 0.6;
