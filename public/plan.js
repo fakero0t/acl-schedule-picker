@@ -37,19 +37,39 @@
   // ---- faces ----
   // A "face" is one card in a slot's deck. single slots have exactly one;
   // clash slots have one face per option, plus a leading split-face when the
-  // group decided to split into groups instead of picking one show.
+  // Rank a conflict's shows so the current leader is always on top:
+  // duel votes first, then original pick count, then earliest start.
+  function rankedOptions(slot) {
+    return slot.options.slice().sort((a, b) => {
+      const va = (slot.tally && slot.tally[a.id]) || 0;
+      const vb = (slot.tally && slot.tally[b.id]) || 0;
+      if (vb !== va) return vb - va;
+      const ca = a.count || 0, cb = b.count || 0;
+      if (cb !== ca) return cb - ca;
+      return a.rowStart - b.rowStart;
+    });
+  }
+
+  // Has anyone cast a duel vote on a real show (or split) for this conflict yet?
+  function slotHasDuelVotes(slot) {
+    return Object.entries(slot.tally || {}).some(([k, v]) => k !== "none" && v > 0);
+  }
+
+  // The show currently on top: the duel winner if there is one, else most-picked.
+  function leaderId(slot) {
+    if (slot.winner && slot.winner !== "split") return slot.winner;
+    if (slot.winner === "split") return null; // the split card carries the crown
+    const r = rankedOptions(slot);
+    return r.length ? r[0].id : null;
+  }
+
   function facesForSlot(slot) {
     if (slot.type === "single") return [{ kind: "single", show: slot.show }];
-    const { options, winner } = slot;
-    if (winner === "split") {
-      return [{ kind: "split", options }, ...options.map((o) => ({ kind: "option", option: o }))];
+    const ranked = rankedOptions(slot);
+    if (slot.winner === "split") {
+      return [{ kind: "split", options: slot.options }, ...ranked.map((o) => ({ kind: "option", option: o }))];
     }
-    if (winner) {
-      const winOpt = options.find((o) => o.id === winner);
-      const rest = options.filter((o) => o.id !== winner);
-      return (winOpt ? [winOpt, ...rest] : options).map((o) => ({ kind: "option", option: o }));
-    }
-    return options.map((o) => ({ kind: "option", option: o }));
+    return ranked.map((o) => ({ kind: "option", option: o }));
   }
 
   function faceTimeLabel(face) {
@@ -84,16 +104,23 @@
         ${rows}
       </div>`;
     }
-    // option
+    // option (one clashing show)
     const o = face.option;
-    const n = (slot.tally && slot.tally[o.id]) || 0;
-    const who = ((slot.chosenBy && slot.chosenBy[o.id]) || []).map(esc).join(", ");
-    const isWin = slot.winner === o.id;
-    return `<div class="deck-card${isWin ? " win" : ""}">
-      ${isWin ? `<div class="dc-badge">👑 group pick</div>` : ""}
+    const duelDecided = slot.winner === o.id;   // won the duel outright
+    const isLeader = leaderId(slot) === o.id;    // currently on top
+    const anyDuel = slotHasDuelVotes(slot);
+    const votes = (slot.tally && slot.tally[o.id]) || 0;
+    const badge = duelDecided ? `<div class="dc-badge">👑 group pick</div>`
+      : (isLeader ? `<div class="dc-badge lead">▲ leading</div>` : "");
+    const countLine = anyDuel
+      ? `${votes} vote${votes === 1 ? "" : "s"}`
+      : `${o.count || 0} pick${(o.count || 0) === 1 ? "" : "s"}`;
+    const who = ((anyDuel ? (slot.chosenBy && slot.chosenBy[o.id]) : o.voters) || []).map(esc).join(", ");
+    return `<div class="deck-card${duelDecided ? " win" : isLeader ? " lead" : ""}">
+      ${badge}
       <div class="dc-name">${esc(o.name)}</div>
       <div class="dc-meta">${esc(o.timeLabel)} · ${esc(o.stage)}</div>
-      <div class="dc-count">${n} vote${n === 1 ? "" : "s"}</div>
+      <div class="dc-count">${countLine}</div>
       ${who ? `<div class="dc-who">${who}</div>` : ""}
     </div>`;
   }
@@ -132,7 +159,7 @@
     const showArrows = faces.length > 1;
     const noneN = slot.type === "clash" ? (slot.tally["none"] || 0) : 0;
     const notes = [];
-    if (slot.type === "clash" && slot.winner === null) notes.push(`<span class="deck-note undecided">Not decided yet</span>`);
+    if (slot.type === "clash" && !slotHasDuelVotes(slot)) notes.push(`<span class="deck-note undecided">Most-picked leads · vote to decide</span>`);
     if (noneN) notes.push(`<span class="deck-note">(${noneN} had no preference)</span>`);
     return `<div class="slot">
       <div class="slot-time">${esc(faceTimeLabel(faces[front]))}</div>

@@ -538,11 +538,16 @@ body {
   box-shadow: 0 6px 18px var(--shadow), 0 0 0 2px var(--pink) inset;
 }
 .deck-card.split { justify-content: flex-start; }
+.deck-card.lead {
+  border-color: #f5b301; background: #fff7e0;
+  box-shadow: 0 6px 18px var(--shadow), 0 0 0 2px #f5b301 inset;
+}
 
 .dc-badge {
   font-family: "Anton", sans-serif; font-size: 11px; letter-spacing: .04em; text-transform: uppercase;
   color: var(--pink);
 }
+.dc-badge.lead { color: #b57900; }
 .dc-name { font-family: "Anton", sans-serif; text-transform: uppercase; font-size: 1.25rem; line-height: 1.05; }
 .dc-meta { font-size: .82rem; color: var(--ink-soft); font-weight: 700; }
 .dc-count { font-size: .82rem; font-weight: 800; color: var(--pink); }
