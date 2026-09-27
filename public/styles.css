@@ -430,7 +430,7 @@ body {
   display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 24px;
   align-items: start; margin-top: 4px;
 }
-#timeline { min-width: 0; padding-bottom: 80px; /* clear the + button */ }
+#timeline { min-width: 0; padding-bottom: 36px; /* with the page's bottom padding, clears the + button */ }
 .map-wrap { position: sticky; top: 84px; height: calc(100vh - 108px); min-height: 360px; }
 #map {
   height: 100%; border: 3px solid var(--ink); border-radius: 14px; box-shadow: 0 4px 0 var(--shadow);
@@ -454,7 +454,8 @@ body {
 
 @media (max-width: 900px) {
   .weekend-layout { grid-template-columns: minmax(0, 1fr); gap: 12px; }
-  .map-wrap { order: -1; position: static; height: 260px; min-height: 0; }
+  .map-wrap { position: static; height: 260px; min-height: 0; margin-bottom: 50px; /* clear the + button */ }
+  #timeline { padding-bottom: 0; }
 }
 .tl { list-style: none; margin: 0; padding: 0; position: relative; }
 .tl::before { /* the vertical rail */
