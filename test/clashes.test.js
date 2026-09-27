@@ -22,3 +22,31 @@ test("a show with no votes cannot be in a clash", () => {
   const counts = { "fri-x-0": { total: 2 } }; // B unvoted
   assert.equal(computeClashes(artists, counts).length, 0);
 });
+
+test("staggered chain splits into overlapping pairs (maximal cliques)", () => {
+  // A(1-5) & B(3-8) overlap; B(3-8) & C(6-10) overlap; A & C do NOT overlap.
+  const arts = [
+    { id: "fri-a", day: "fri", stage: "a", name: "A", timeLabel: "", rowStart: 1, rowEnd: 5 },
+    { id: "fri-b", day: "fri", stage: "b", name: "B", timeLabel: "", rowStart: 3, rowEnd: 8 },
+    { id: "fri-c", day: "fri", stage: "c", name: "C", timeLabel: "", rowStart: 6, rowEnd: 10 },
+  ];
+  const counts = { "fri-a": { total: 1 }, "fri-b": { total: 1 }, "fri-c": { total: 1 } };
+  const sets = computeClashes(arts, counts)
+    .map((c) => c.options.map((o) => o.id).sort().join("+"))
+    .sort();
+  // Two duels; B bridges both; A and C are never lumped together.
+  assert.deepEqual(sets, ["fri-a+fri-b", "fri-b+fri-c"]);
+});
+
+test("mutually overlapping trio stays one clique", () => {
+  // All three share the window 6-7 -> a single 3-way conflict.
+  const arts = [
+    { id: "fri-a", day: "fri", stage: "a", name: "A", timeLabel: "", rowStart: 1, rowEnd: 7 },
+    { id: "fri-b", day: "fri", stage: "b", name: "B", timeLabel: "", rowStart: 4, rowEnd: 9 },
+    { id: "fri-c", day: "fri", stage: "c", name: "C", timeLabel: "", rowStart: 6, rowEnd: 10 },
+  ];
+  const counts = { "fri-a": { total: 1 }, "fri-b": { total: 1 }, "fri-c": { total: 1 } };
+  const clashes = computeClashes(arts, counts);
+  assert.equal(clashes.length, 1);
+  assert.deepEqual(clashes[0].options.map((o) => o.id), ["fri-a", "fri-b", "fri-c"]);
+});
