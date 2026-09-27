@@ -514,9 +514,6 @@ body {
   transition: transform .06s ease, box-shadow .06s ease;
 }
 .card-edit:active { transform: translateY(2px); box-shadow: none; }
-.legend .sw.acl { background: #ffd3e8; border-color: var(--pink); }
-.legend .sw.event { background: #fff2c9; border-color: var(--ink); }
-.legend .sw.hangout { background: var(--sky); border-color: var(--ink); }
 .card-loc { font-size: 13px; font-weight: 700; margin-top: 6px; }
 .card-desc { font-size: 13px; font-weight: 600; margin-top: 5px; color: var(--ink-soft); line-height: 1.4; white-space: pre-wrap; overflow-wrap: anywhere; }
 .card a { color: var(--ink); font-weight: 800; text-decoration: underline; text-underline-offset: 2px; }
