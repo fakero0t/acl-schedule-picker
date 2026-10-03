@@ -99,7 +99,7 @@ body {
 
 .grid {
   display: grid;
-  grid-template-columns: var(--axis-w) repeat(8, minmax(96px, 1fr));
+  grid-template-columns: var(--axis-w) repeat(7, minmax(96px, 1fr));
   grid-auto-rows: var(--row-h);
   gap: 4px;
   min-width: 720px;
@@ -506,7 +506,7 @@ body {
 .tl-item.overlap { position: relative; }
 .tl-lanes { display: grid; grid-template-columns: repeat(var(--lanes), minmax(0, 1fr)); gap: 10px; min-width: 0; }
 .lane { display: flex; flex-direction: column; min-width: 0; }
-.lane-slot { display: flex; }
+.lane-slot { display: flex; padding-bottom: 8px; } /* back-to-back sets in a lane don't touch */
 .lane-slot > .card { flex: 1; }
 .tl-mark { position: absolute; left: 0; display: grid; grid-template-columns: 86px 26px; pointer-events: none; }
 .tl-mark.acl .tl-dot { background: var(--pink); border-color: var(--pink); }

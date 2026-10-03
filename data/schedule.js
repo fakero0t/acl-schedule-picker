@@ -20,7 +20,6 @@ const STAGES = [
   { key: "beatbox", label: "Beatbox" },
   { key: "titos", label: "Tito's Handmade Vodka" },
   { key: "snapchat", label: "Snapchat" },
-  { key: "bonus", label: "Bonus Tracks" },
   { key: "amex", label: "American Express" },
 ];
 
@@ -45,7 +44,6 @@ const RAW = {
     beatbox: [["Letrainiump", "2:25", "2:55", "sat-beatbox-4"], ["Cure for Paranoia", "3:25", "3:55", "sat-beatbox-0"], ["Night Tapes", "4:25", "5:05", "sat-tmobile-0"], ["Ryan Beatty", "5:50", "6:50", "sat-beatbox-1"], ["Snow Strippers", "7:35", "8:15", "sat-millerlite-2"]],
     titos: [["DJ Cassandra", "2:05", "2:45", "sat-titos-1"], ["Don West", "3:15", "4:00", "sat-titos-2"], ["Rodrigo y Gabriela", "4:30", "5:30", "sat-titos-3"], ["¥ØU$UK€ ¥UK1MAT$U", "6:30", "7:30", "sat-titos-4"], ["Silent Disco", "8:00", "10:00", "sat-titos-5"]],
     snapchat: [["Rochelle Jordan", "2:45", "3:15", "sat-snapchat-0"], ["Skye Newman", "3:55", "4:40", "sat-snapchat-1"], ["It's Murph", "5:30", "6:30", "sat-snapchat-2"], ["Lykke Li", "7:30", "8:30", "sat-snapchat-3"]],
-    bonus: [["Unfollow the Algorithm: Antoni Porowski", "2:30", "3:00"], ["Suki Waterhouse with Mack", "3:15", "3:30"], ["Drag Bingo by Extragrams", "4:45", "5:15"], ["9 to 5 Drag: A Dolly Tribute", "6:30", "7:00"]],
     amex: [["Annie DiRusso", "2:15", "2:45", "sat-amex-0"], ["Finn Wolfhard", "3:15", "3:55", "sat-amex-1"], ["Young Miko", "4:40", "5:30", "sat-amex-2"], ["Lola Young", "6:30", "7:30", "sat-amex-3"], ["Rüfüs Du Sol", "8:30", null, "sat-amex-4"]],
   },
   sun: {
