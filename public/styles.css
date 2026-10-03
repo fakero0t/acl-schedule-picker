@@ -99,7 +99,7 @@ body {
 
 .grid {
   display: grid;
-  grid-template-columns: var(--axis-w) repeat(7, minmax(96px, 1fr));
+  grid-template-columns: var(--axis-w) repeat(8, minmax(96px, 1fr));
   grid-auto-rows: var(--row-h);
   gap: 4px;
   min-width: 720px;
