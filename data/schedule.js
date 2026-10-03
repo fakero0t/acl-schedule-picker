@@ -35,10 +35,10 @@ const RAW = {
     amex: [["Hunx and His Punx", "1:15", "2:00"], ["CMAT", "2:45", "3:30"], ["Amyl and the Sniffers", "4:30", "5:30"], ["Labrinth", "6:30", "7:30"], ["Charli XCX", "8:40", null]],
   },
   sat: {
-    tmobile: [["Night Tapes", "1:00", "1:45"], ["Balu Brigada", "2:30", "3:15"], ["Suki Waterhouse", "4:15", "5:15"], ["Bleachers", "6:15", "7:15"], ["Lorde", "8:15", null]],
-    millerlite: [["Temper City", "1:45", "2:30"], ["Arcy Drive", "3:15", "4:15"], ["Snow Strippers", "5:15", "6:15"], ["Levity", "7:15", "8:15"]],
+    tmobile: [["Night Tapes", "1:00", "1:45"], ["Balu Brigada", "3:05", "3:40"], ["Suki Waterhouse", "4:25", "5:15"], ["Bleachers", "6:15", "7:15"], ["Lorde", "8:15", null]],
+    millerlite: [["Temper City", "2:35", "3:05"], ["Arcy Drive", "3:15", "4:15"], ["Snow Strippers", "5:15", "6:15"], ["Levity", "7:15", "8:15"]],
     bmi: [["Fightmaster", "12:45", "1:15"], ["Emma Ogier", "1:45", "2:30"], ["Coleman Jennings", "3:30", "4:15"], ["Fai Laci", "5:15", "6:15"]],
-    beatbox: [["Cure for Paranoia", "2:00", "2:45"], ["Ryan Beatty", "3:30", "4:30"], ["Palace", "5:30", "6:30"], ["Fakemink", "7:30", "8:30"]],
+    beatbox: [["Cure for Paranoia", "2:00", "2:45"], ["Ryan Beatty", "3:30", "4:30"], ["Palace", "5:15", "6:15"], ["Fakemink", "7:30", "8:30"]],
     titos: [["Left Lucid", "12:45", "1:30"], ["DJ Cassandra", "2:00", "2:45"], ["Don West", "3:15", "4:00"], ["Rodrigo y Gabriela", "4:30", "5:30"], ["¥ØU$UK€ ¥UK1MAT$U", "6:30", "7:30"], ["Silent Disco", "8:00", "10:00"]],
     snapchat: [["Rochelle Jordan", "2:00", "2:45"], ["Skye Newman", "3:30", "4:30"], ["It's Murph", "5:30", "6:30"], ["Lykke Li", "7:30", "8:30"]],
     amex: [["Annie DiRusso", "1:15", "2:00"], ["Finn Wolfhard", "2:45", "3:30"], ["Young Miko", "4:30", "5:30"], ["Lola Young", "6:30", "7:30"], ["Rüfüs Du Sol", "8:30", null]],
