@@ -23,7 +23,8 @@ const STAGES = [
   { key: "amex", label: "American Express" },
 ];
 
-// [name, start, end|null] — all times are PM. end null = single-time headliner.
+// [name, start, end|null, id?] — all times are PM. end null = single-time headliner.
+// id defaults to day-stage-index; pass one to keep a moved set's original id.
 const RAW = {
   fri: {
     tmobile: [["Asleep at the Wheel", "1:00", "1:45"], ["New Constellations", "2:30", "3:15"], ["Jesse Welles", "4:15", "5:15"], ["Turnstile", "6:15", "7:15"], ["Skrillex", "8:15", null]],
@@ -34,14 +35,16 @@ const RAW = {
     snapchat: [["Elijah Delgado", "2:00", "2:45"], ["LP", "3:30", "4:30"], ["Bunt.", "5:30", "6:30"], ["The Chainsmokers", "7:30", "8:30"]],
     amex: [["Hunx and His Punx", "1:15", "2:00"], ["CMAT", "2:45", "3:30"], ["Amyl and the Sniffers", "4:30", "5:30"], ["Labrinth", "6:30", "7:30"], ["Charli XCX", "8:40", null]],
   },
+  // Saturday re-transcribed from the updated day-of schedule. Sets that moved keep
+  // their original id (4th element) so existing picks still point at them.
   sat: {
-    tmobile: [["Night Tapes", "1:00", "1:45"], ["Balu Brigada", "2:30", "3:15"], ["Suki Waterhouse", "4:15", "5:15"], ["Bleachers", "6:15", "7:15"], ["Lorde", "8:15", null]],
-    millerlite: [["Temper City", "1:45", "2:30"], ["Arcy Drive", "3:15", "4:15"], ["Snow Strippers", "5:15", "6:15"], ["Levity", "7:15", "8:15"]],
-    bmi: [["Fightmaster", "12:45", "1:15"], ["Emma Ogier", "1:45", "2:30"], ["Coleman Jennings", "3:30", "4:15"], ["Fai Laci", "5:15", "6:15"]],
-    beatbox: [["Cure for Paranoia", "2:00", "2:45"], ["Ryan Beatty", "3:30", "4:30"], ["Palace", "5:30", "6:30"], ["Fakemink", "7:30", "8:30"]],
-    titos: [["Left Lucid", "12:45", "1:30"], ["DJ Cassandra", "2:00", "2:45"], ["Don West", "3:15", "4:00"], ["Rodrigo y Gabriela", "4:30", "5:30"], ["¥ØU$UK€ ¥UK1MAT$U", "6:30", "7:30"], ["Silent Disco", "8:00", "10:00"]],
-    snapchat: [["Rochelle Jordan", "2:00", "2:45"], ["Skye Newman", "3:30", "4:30"], ["It's Murph", "5:30", "6:30"], ["Lykke Li", "7:30", "8:30"]],
-    amex: [["Annie DiRusso", "1:15", "2:00"], ["Finn Wolfhard", "2:45", "3:30"], ["Young Miko", "4:30", "5:30"], ["Lola Young", "6:30", "7:30"], ["Rüfüs Du Sol", "8:30", null]],
+    tmobile: [["Balu Brigada", "3:05", "3:40", "sat-tmobile-1"], ["Suki Waterhouse", "4:25", "5:15", "sat-tmobile-2"], ["Bleachers", "6:15", "7:15", "sat-tmobile-3"], ["Lorde", "8:15", null, "sat-tmobile-4"]],
+    millerlite: [["Temper City", "2:35", "3:05", "sat-millerlite-0"], ["Arcy Drive", "3:40", "4:25", "sat-millerlite-1"], ["Palace", "5:15", "6:15", "sat-beatbox-2"], ["Levity", "7:15", "8:15", "sat-millerlite-3"]],
+    bmi: [["Emma Ogier", "2:35", "3:05", "sat-bmi-1"], ["Coleman Jennings", "3:40", "4:25", "sat-bmi-2"], ["Fai Laci", "5:15", "6:15", "sat-bmi-3"]],
+    beatbox: [["Letrainiump", "2:25", "2:55", "sat-beatbox-4"], ["Cure for Paranoia", "3:25", "3:55", "sat-beatbox-0"], ["Night Tapes", "4:25", "5:05", "sat-tmobile-0"], ["Ryan Beatty", "5:50", "6:50", "sat-beatbox-1"], ["Snow Strippers", "7:35", "8:15", "sat-millerlite-2"]],
+    titos: [["DJ Cassandra", "2:05", "2:45", "sat-titos-1"], ["Don West", "3:15", "4:00", "sat-titos-2"], ["Rodrigo y Gabriela", "4:30", "5:30", "sat-titos-3"], ["¥ØU$UK€ ¥UK1MAT$U", "6:30", "7:30", "sat-titos-4"], ["Silent Disco", "8:00", "10:00", "sat-titos-5"]],
+    snapchat: [["Rochelle Jordan", "2:45", "3:15", "sat-snapchat-0"], ["Skye Newman", "3:55", "4:40", "sat-snapchat-1"], ["It's Murph", "5:30", "6:30", "sat-snapchat-2"], ["Lykke Li", "7:30", "8:30", "sat-snapchat-3"]],
+    amex: [["Annie DiRusso", "2:15", "2:45", "sat-amex-0"], ["Finn Wolfhard", "3:15", "3:55", "sat-amex-1"], ["Young Miko", "4:40", "5:30", "sat-amex-2"], ["Lola Young", "6:30", "7:30", "sat-amex-3"], ["Rüfüs Du Sol", "8:30", null, "sat-amex-4"]],
   },
   sun: {
     tmobile: [["Solya", "1:15", "2:00"], ["Stella Lefty", "2:45", "3:30"], ["Audrey Hobert", "4:30", "5:30"], ["Geese", "6:30", "7:30"], ["The XX", "8:30", null]],
@@ -70,13 +73,13 @@ for (const day of DAYS) {
   for (const stage of STAGES) {
     const sets = RAW[day.key][stage.key] || [];
     sets.forEach((set, idx) => {
-      const [name, start, end] = set;
+      const [name, start, end, fixedId] = set;
       const startMin = minutesFromNoon(start);
       const endMin = end == null ? startMin + DEFAULT_SET_MIN : minutesFromNoon(end);
       const rowStart = Math.round((startMin - NOON) / SLOT_MIN) + 1;
       const rowEnd = Math.round((endMin - NOON) / SLOT_MIN) + 1;
       ARTISTS.push({
-        id: `${day.key}-${stage.key}-${idx}`,
+        id: fixedId || `${day.key}-${stage.key}-${idx}`,
         day: day.key,
         stage: stage.key,
         name,
@@ -91,6 +94,7 @@ for (const day of DAYS) {
 }
 
 const VALID_IDS = new Set(ARTISTS.map((a) => a.id));
+if (VALID_IDS.size !== ARTISTS.length) throw new Error("schedule: duplicate artist ids");
 
 // Total number of 15-min rows on the grid (12:00 PM -> 10:00 PM).
 const TOTAL_ROWS = DAY_END_MIN / SLOT_MIN;

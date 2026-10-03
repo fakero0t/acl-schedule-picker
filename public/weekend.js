@@ -59,6 +59,8 @@
   const sortKey = (min) => (min < LATE_NIGHT_MIN ? min + 1440 : min);
   // ACL grid rows are 15-min slots counted from noon (row 1 = 12:00 PM).
   const rowToMin = (row) => 12 * 60 + (row - 1) * scheduleData.slotMin;
+  // ACL set times are "H:MM" PM; use them directly so off-grid times (e.g. 3:05) stay exact.
+  const pmToMin = (t) => 12 * 60 + hhmmToMin(t) % (12 * 60);
 
   // Turn bare URLs in user text into links (text is escaped first).
   function linkify(text) {
@@ -78,10 +80,11 @@
       if (a.day !== dayKey) continue;
       const v = results.voters[a.id];
       if (!v || v.definitely.length + v.maybe.length === 0) continue;
-      const start = rowToMin(a.rowStart);
+      const start = pmToMin(a.start);
+      const end = a.end ? pmToMin(a.end) : null;
       // span: minutes the item occupies (headliners use the grid's default set length)
-      const span = rowToMin(a.rowEnd) - start;
-      items.push({ kind: "acl", start, end: a.end ? rowToMin(a.rowEnd) : null, span, artist: a, voters: v });
+      const span = end != null ? end - start : rowToMin(a.rowEnd) - rowToMin(a.rowStart);
+      items.push({ kind: "acl", start, end, span, artist: a, voters: v });
     }
     for (const ev of events) {
       if (ev.day !== dayKey) continue;
@@ -406,8 +409,11 @@
   async function init() {
     if (window.L) initMap(); // timeline still works if the map library fails to load
     scheduleData = await fetch("/api/schedule").then((r) => r.json());
-    activeDay = scheduleData.days[0].key;
+    // Default to today's festival day (Sat on Saturday, Sun on Sunday), else the first day.
+    const todayKey = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"][new Date().getDay()];
+    activeDay = (scheduleData.days.find((d) => d.key === todayKey) || scheduleData.days[0]).key;
     ACLGrid.buildDayTabs(els.days, scheduleData.days, (key) => { activeDay = key; render(); });
+    els.days.querySelectorAll(".day-tab").forEach((b, i) => b.classList.toggle("active", scheduleData.days[i].key === activeDay));
 
     scheduleData.days.forEach((d) => {
       const b = document.createElement("button");
